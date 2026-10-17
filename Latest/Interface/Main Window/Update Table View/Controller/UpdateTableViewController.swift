@@ -39,6 +39,9 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     /// The menu displayed on secondary clicks on cells in the list
     @IBOutlet weak var tableViewMenu: NSMenu!
     
+	/// Constraint controlling the top constraint of the table view.
+	@IBOutlet weak var topTableConstraint: NSLayoutConstraint!
+	
 	/// The currently selected app within the UI.
 	var selectedApp: App? {
 		willSet {
@@ -77,8 +80,12 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 			self.updateTitleAndBatch()
 		}
 		
-		if #available(macOS 11, *) {
-			self.updatesLabel.isHidden = true
+		self.updatesLabel.isHidden = true
+		
+		if #available(macOS 26, *) {
+			self.topTableConstraint.constant = 0
+			self.tableView.enclosingScrollView?.contentInsets = .init(top: 78, left: 0, bottom: 0, right: 0)
+			self.tableView.enclosingScrollView?.scrollerInsets = .init(top: 0, left: 0, bottom: 10, right: 0)
 		}
     }
     
@@ -195,27 +202,25 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
                 self.updateApp(atIndex: row)
 				tableView.rowActionsVisible = false
             })
-            
-			// Teal on macOS 11 / below is the same as Cyan on macOS 12+
-			if #available(macOS 12.0, *) {
-				action.backgroundColor = .systemCyan
-			} else {
-				action.backgroundColor = .systemTeal
-			}
-            
+			
+			action.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
+			action.backgroundColor = .systemCyan
+			
             return [action]
         } else if edge == .leading {
 			let open = NSTableViewRowAction(style: .regular, title: NSLocalizedString("OpenAction", comment: "Action to open a given app.")) { action, row in
 				self.openApp(at: row)
 				tableView.rowActionsVisible = false
 			}
+			open.image = NSImage(systemSymbolName: "arrow.up.forward.app", accessibilityDescription: nil)
 			
             let reveal = NSTableViewRowAction(style: .regular, title: NSLocalizedString("RevealAction", comment: "Revea in Finder Row action"), handler: { (action, row) in
                 self.showAppInFinder(at: row)
 				tableView.rowActionsVisible = false
             })
 			reveal.backgroundColor = .systemGray
-
+			reveal.image = NSImage(systemSymbolName: "finder", accessibilityDescription: nil)
+			
             return [open, reveal]
         }
         
@@ -482,13 +487,8 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		statusText = String.localizedStringWithFormat(format, count)
         
 		self.scrubber?.reloadData()
-		
-		if #available(macOS 11, *) {
-			self.view.window?.subtitle = statusText
-		} else {
-			self.updatesLabel.stringValue = statusText
-		}
-    }
+		self.view.window?.subtitle = statusText
+	}
 	
 	private func ensureSelection() {
 		self.selectApp(at: self.selectedAppIndex)

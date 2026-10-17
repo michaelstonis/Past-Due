@@ -42,27 +42,24 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
     }()
     
     /// The progress indicator showing how many apps have been checked for updates
-    @IBOutlet weak var progressIndicator: NSProgressIndicator!
+	lazy var progressIndicator: NSProgressIndicator = {
+		let progressIndicator = NSProgressIndicator()
+		progressIndicator.controlSize = .small
+		progressIndicator.style = .spinning
+		
+		return progressIndicator
+	}()
     
     /// The button that triggers an reload/recheck for updates
-    @IBOutlet weak var reloadButton: NSButton!
     @IBOutlet weak var reloadTouchBarButton: NSButton!
     
-    /// The button that triggers all available updates to be done
-    @IBOutlet weak var updateAllButton: NSButton!
-        
     override func windowDidLoad() {
         super.windowDidLoad()
     
 		self.window?.titlebarAppearsTransparent = true
 		self.window?.title = Bundle.main.localizedInfoDictionary?[kCFBundleNameKey as String] as! String
-
-		if #available(macOS 11.0, *) {
-			self.window?.toolbarStyle = .unified
-		} else {
-			self.window?.titleVisibility = .hidden
-		}
-        
+		self.window?.toolbarStyle = .unified
+		
 		// Set ourselves as the view menu delegate
 		NSApplication.shared.mainMenu?.item(at: MainMenuItem.view.rawValue)?.submenu?.delegate = self
 		
@@ -92,10 +89,26 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
     
     /// Open all apps that have an update available. If apps from the Mac App Store are there as well, open the Mac App Store
     @IBAction func updateAll(_ sender: Any?) {
+		let apps = UpdateCheckCoordinator.shared.appProvider.updatableApps
+		
+		// Check if there are app store updates
+		if apps.contains(where: { $0.bundle.source == .appStore }) {
+			do {
+				try AppStoreUpdateOperation.prepareForUpdates()
+			} catch {
+				let updatesPage = URL(string: "macappstore://apps.apple.com/updates")!
+				if !AppStoreUpdateSettings.alwaysPerformManualUpdates.active {
+					UpdateInstallHelperAlert.present(with: error, fallbackURL: updatesPage)
+				} else {
+					NSWorkspace.shared.open(updatesPage)
+				}
+			}
+		}
+		
 		// Iterate all updatable apps and perform update
-		UpdateCheckCoordinator.shared.appProvider.updatableApps.forEach({ app in
+		apps.forEach({ app in
 			if !app.isUpdating {
-				app.performUpdate()
+				app.performUpdate(isBulkUpdate: true)
 			}
 		})
     }
@@ -112,6 +125,17 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 		NSWorkspace.shared.open(URL(string: "https://max.codes/latest/donate/")!)
 	}
     
+	fileprivate func validate(_ selector: Selector) -> Bool {
+		switch selector {
+		case #selector(updateAll(_:)):
+			hasUpdatesAvailable
+		case #selector(reload(_:)):
+			!isRunningUpdateCheck
+		default:
+			true
+		}
+	}
+	
     
     // MARK: Menu Item
 
@@ -121,15 +145,11 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
         }
         
         switch action {
-        case #selector(updateAll(_:)):
-			return hasUpdatesAvailable
-        case #selector(reload(_:)):
-            return self.reloadButton.isEnabled
+		// Only allow the find item
 		case #selector(performFindPanelAction(_:)):
-			// Only allow the find item
 			return menuItem.tag == 1
         default:
-            return true
+            return validate(action)
         }
     }
     
@@ -167,14 +187,13 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
     // MARK: - Update Checker Progress Delegate
 	
 	func updateCheckerDidStartScanningForApps(_ updateChecker: UpdateCheckCoordinator) {
-		// Disable UI
-        self.reloadButton.isEnabled = false
-        self.reloadTouchBarButton.isEnabled = false
+		self.isRunningUpdateCheck = true
 		
 		// Setup indeterminate progress indicator
 		self.progressIndicator.isIndeterminate = true
-        self.progressIndicator.isHidden = false
 		self.progressIndicator.startAnimation(updateChecker)
+
+		self.window?.toolbar?.validateVisibleItems()
 	}
     
     /// This implementation activates the progress indicator, sets its max value and disables the reload button
@@ -191,10 +210,8 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
     }
 	
 	func updateCheckerDidFinishCheckingForUpdates(_ updateChecker: UpdateCheckCoordinator) {
-		self.reloadButton.isEnabled = true
-		self.reloadTouchBarButton.isEnabled = true
-		self.progressIndicator.isHidden = true
-        self.updateAllButton.isEnabled = hasUpdatesAvailable
+		self.isRunningUpdateCheck = false
+		self.window?.toolbar?.validateVisibleItems()
 	}
     
 	
@@ -218,6 +235,14 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 	/// Whether there are any updatable apps.
 	private var hasUpdatesAvailable: Bool {
 		!UpdateCheckCoordinator.shared.appProvider.updatableApps.isEmpty
+	}
+	
+	/// Whether an update check is currently running
+	private var isRunningUpdateCheck: Bool = false {
+		didSet {
+			self.reloadTouchBarButton.isEnabled = !isRunningUpdateCheck
+			self.progressIndicator.isHidden = !isRunningUpdateCheck
+		}
 	}
 
     
@@ -252,4 +277,11 @@ extension MainWindowController: NSWindowDelegate {
 		return NSRect(x: rect.minX, y: window.frame.height, width: rect.width, height: rect.height)
 	}
     
+}
+
+extension MainWindowController: NSToolbarItemValidation {
+	func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
+		guard let action = item.action else { return true }
+		return validate(action)
+	}
 }
