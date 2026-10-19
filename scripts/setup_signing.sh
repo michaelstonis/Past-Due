@@ -222,8 +222,9 @@ echo "Saved local signing settings to ${SIGNING_ENV_FILE}"
 # 5. Optional: Sync secrets to GitHub Actions
 if [[ "${SYNC_GH_SECRETS}" == "1" ]]; then
   log_header "Step 5: Syncing Secrets to GitHub Actions (michaelstonis/Past-Due)"
-  TMP_SPARKLE_KEY="$(mktemp)"
-  trap 'rm -f "${TMP_SPARKLE_KEY}"' EXIT
+  TMP_SPARKLE_DIR="$(mktemp -d)"
+  TMP_SPARKLE_KEY="${TMP_SPARKLE_DIR}/sparkle_private_key"
+  trap 'rm -rf "${TMP_SPARKLE_DIR}"' EXIT
   "${GENERATE_KEYS}" --account "${SPARKLE_ACCOUNT}" -x "${TMP_SPARKLE_KEY}"
   gh secret set SPARKLE_PRIVATE_KEY --repo michaelstonis/Past-Due < "${TMP_SPARKLE_KEY}"
   gh secret set APPLE_TEAM_ID --repo michaelstonis/Past-Due --body "${TEAM_ID}"
