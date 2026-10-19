@@ -4,6 +4,9 @@ set -euo pipefail
 APP_NAME="Past Due"
 ARTIFACT_SLUG="Past-Due"
 PROJECT_NAME="Latest.xcodeproj"
+PBXPROJ_FILE="Latest.xcodeproj/project.pbxproj"
+SOURCE_INFO_PLIST="Latest/Resources/Info.plist"
+CHANGELOG_FILE="CHANGELOG.md"
 SCHEME_NAME="Latest"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -24,6 +27,7 @@ CALLER_NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 CALLER_SKIP_NOTARIZATION="${SKIP_NOTARIZATION:-}"
 CALLER_UPDATE_APPCAST="${UPDATE_APPCAST:-}"
 CALLER_SPARKLE_ACCOUNT="${SPARKLE_ACCOUNT:-}"
+CALLER_AUTO_VERSION="${AUTO_VERSION:-}"
 
 if [[ -f "${SIGNING_ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -36,62 +40,82 @@ NOTARY_PROFILE="${CALLER_NOTARY_PROFILE:-${NOTARY_PROFILE:-}}"
 SKIP_NOTARIZATION="${CALLER_SKIP_NOTARIZATION:-${SKIP_NOTARIZATION:-0}}"
 UPDATE_APPCAST="${CALLER_UPDATE_APPCAST:-${UPDATE_APPCAST:-0}}"
 SPARKLE_ACCOUNT="${CALLER_SPARKLE_ACCOUNT:-${SPARKLE_ACCOUNT:-ed25519}}"
+AUTO_VERSION="${CALLER_AUTO_VERSION:-${AUTO_VERSION:-1}}"
 
 CONFIGURATION="${CONFIGURATION:-Release}"
 XCODE_DESTINATION="${XCODE_DESTINATION:-generic/platform=macOS}"
 VERSION_OVERRIDE="${APP_VERSION:-}"
 BUILD_OVERRIDE="${APP_BUILD:-}"
+BUMP_MODE="${BUMP_MODE:-}"
 ENTITLEMENTS_SOURCE="${ENTITLEMENTS_FILE:-}"
 ALLOW_DEBUGGING=0
 APP_ONLY=0
 OPEN_OUTPUT=0
+PUBLISH_RELEASE=0
 
 usage() {
   cat <<'USAGE'
 Usage: scripts/build_dmg.sh [options]
 
-Builds "Past Due.app" with xcodebuild and packages dist/Past-Due-<version>.dmg.
-Automatically loads .signing.env if present (created by scripts/setup_signing.sh).
+Builds "Past Due.app" with xcodebuild, automatically manages semantic version
+and build numbers across the project, signs & notarizes the app and DMG, and
+updates appcast.xml.
 
 Options:
-  --app-only                Build/sign/notarize only the .app bundle
-  --version <value>         Override CFBundleShortVersionString after build
-  --build <value>           Override CFBundleVersion after build
-  --entitlements <path>     Entitlements file to use when signing
-  --allow-debugging         Add com.apple.security.get-task-allow when signing
-  --skip-notarization       Skip notarization/stapling even if NOTARY_PROFILE is set
-  --update-appcast          Sign DMG with Sparkle EdDSA key and update appcast.xml
-  --no-update-appcast       Skip Sparkle signing and appcast.xml update
-  --configuration <name>    Xcode configuration to build (default: Release)
-  --destination <dest>      xcodebuild destination (default: generic/platform=macOS)
-  --open                    Open the resulting app or DMG when done
-  -h, --help                Show this help
+  --bump <major|minor|patch>  Increment MARKETING_VERSION (e.g. 1.0.0 -> 1.0.1)
+  --auto-version              Auto-bump patch if current version tag already exists (default)
+  --no-auto-version           Do not auto-bump or write version changes back to source files
+  --version <value>           Explicitly set CFBundleShortVersionString / MARKETING_VERSION
+  --build <value>             Explicitly set CFBundleVersion (default: monotonic auto-increment)
+  --publish                   Commit version/appcast updates, tag v<version>, push, and create GitHub Release
+  --app-only                  Build/sign/notarize only the .app bundle
+  --entitlements <path>       Entitlements file to use when signing
+  --allow-debugging           Add com.apple.security.get-task-allow when signing
+  --skip-notarization         Skip notarization/stapling even if NOTARY_PROFILE is set
+  --update-appcast            Sign DMG with Sparkle EdDSA key and update appcast.xml
+  --no-update-appcast         Skip Sparkle signing and appcast.xml update
+  --configuration <name>      Xcode configuration to build (default: Release)
+  --destination <dest>        xcodebuild destination (default: generic/platform=macOS)
+  --open                      Open the resulting app or DMG when done
+  -h, --help                  Show this help
 
 Environment:
-  DEVELOPMENT_TEAM          Apple Developer Team ID (embedded in PastDueUpdateInstaller).
-  APP_SIGN_IDENTITY         Optional signing identity. Use "-" for ad-hoc signing.
-  NOTARY_PROFILE            notarytool keychain profile name for notarization.
-  UPDATE_APPCAST            Set to "1" to sign DMG with Sparkle and update appcast.xml.
-  SPARKLE_ACCOUNT           Keychain account for Sparkle EdDSA key (default: ed25519).
-  APP_VERSION               Same as --version.
-  APP_BUILD                 Same as --build.
-  ENTITLEMENTS_FILE         Same as --entitlements.
-  CONFIGURATION             Same as --configuration.
-  XCODE_DESTINATION         Same as --destination.
+  AUTO_VERSION                Set to "1" (default) to automatically manage project version & build numbers.
+  BUMP_MODE                   Same as --bump (major, minor, or patch).
+  DEVELOPMENT_TEAM            Apple Developer Team ID (embedded in PastDueUpdateInstaller).
+  APP_SIGN_IDENTITY           Optional signing identity. Use "-" for ad-hoc signing.
+  NOTARY_PROFILE              notarytool keychain profile name for notarization.
+  UPDATE_APPCAST              Set to "1" to sign DMG with Sparkle and update appcast.xml.
+  SPARKLE_ACCOUNT             Keychain account for Sparkle EdDSA key (default: ed25519).
+  APP_VERSION                 Same as --version.
+  APP_BUILD                   Same as --build.
 
 Examples:
-  scripts/setup_signing.sh
-  scripts/build_dmg.sh
-  APP_SIGN_IDENTITY="-" scripts/build_dmg.sh --app-only --allow-debugging
-  APP_SIGN_IDENTITY="Developer ID Application: Your Name (ABCDE12345)" \
-  DEVELOPMENT_TEAM="ABCDE12345" \
-  NOTARY_PROFILE="PastDueNotary" \
-  scripts/build_dmg.sh --update-appcast
+  ./scripts/build_dmg.sh                        # Auto-manages version/build, signs, notarizes, updates appcast.xml
+  ./scripts/build_dmg.sh --bump minor           # Bumps 1.0.0 -> 1.1.0, increments build number, builds & signs DMG
+  ./scripts/build_dmg.sh --publish              # Builds, notarizes, commits appcast/version, tags & publishes GitHub Release
 USAGE
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --bump)
+      BUMP_MODE="$2"
+      shift 2
+      ;;
+    --auto-version)
+      AUTO_VERSION=1
+      shift
+      ;;
+    --no-auto-version)
+      AUTO_VERSION=0
+      shift
+      ;;
+    --publish|--release)
+      PUBLISH_RELEASE=1
+      UPDATE_APPCAST=1
+      shift
+      ;;
     --app-only)
       APP_ONLY=1
       shift
@@ -190,6 +214,128 @@ write_empty_plist() {
 <dict/>
 </plist>
 EOF
+}
+
+bump_semver() {
+  local current="$1"
+  local mode="$2"
+  local major minor patch
+  IFS='.' read -r major minor patch <<< "${current}"
+  major="${major:-1}"
+  minor="${minor:-0}"
+  patch="${patch:-0}"
+
+  case "${mode}" in
+    major)
+      major=$((major + 1))
+      minor=0
+      patch=0
+      ;;
+    minor)
+      minor=$((minor + 1))
+      patch=0
+      ;;
+    patch)
+      patch=$((patch + 1))
+      ;;
+    *)
+      echo "Invalid --bump mode '${mode}'. Use major, minor, or patch." >&2
+      exit 1
+      ;;
+  esac
+
+  printf '%d.%d.%d' "${major}" "${minor}" "${patch}"
+}
+
+manage_project_version() {
+  local pbxproj="${ROOT_DIR}/${PBXPROJ_FILE}"
+  local src_plist="${ROOT_DIR}/${SOURCE_INFO_PLIST}"
+  local changelog="${ROOT_DIR}/${CHANGELOG_FILE}"
+
+  # Read current marketing version from project.pbxproj
+  local current_marketing
+  current_marketing="$(sed -n 's/.*MARKETING_VERSION = \([0-9][0-9.]*\);.*/\1/p' "${pbxproj}" | head -n 1)"
+  current_marketing="${current_marketing:-1.0.0}"
+
+  local target_marketing="${current_marketing}"
+  if [[ -n "${VERSION_OVERRIDE}" ]]; then
+    target_marketing="${VERSION_OVERRIDE}"
+  elif [[ -n "${BUMP_MODE}" ]]; then
+    target_marketing="$(bump_semver "${current_marketing}" "${BUMP_MODE}")"
+  elif [[ "${AUTO_VERSION}" == "1" ]]; then
+    # If tag v<current_marketing> already exists and HEAD has advanced past it, auto-bump patch
+    if git -C "${ROOT_DIR}" rev-parse "v${current_marketing}" >/dev/null 2>&1; then
+      local commits_since_tag
+      commits_since_tag="$(git -C "${ROOT_DIR}" rev-list "v${current_marketing}..HEAD" --count 2>/dev/null || echo 0)"
+      if [[ "${commits_since_tag}" -gt 0 ]]; then
+        target_marketing="$(bump_semver "${current_marketing}" "patch")"
+        log "Tag v${current_marketing} already exists with ${commits_since_tag} new commit(s); auto-bumping version to ${target_marketing}"
+      fi
+    fi
+  fi
+
+  # Compute monotonic build number (CFBundleVersion)
+  local git_commits plist_build appcast_build max_build target_build
+  git_commits="$(git -C "${ROOT_DIR}" rev-list HEAD --count 2>/dev/null || echo 1000)"
+  plist_build="$(plist_get "${src_plist}" CFBundleVersion)"
+  plist_build="${plist_build:-1000}"
+  appcast_build="0"
+  if [[ -f "${APPCAST_FILE}" ]]; then
+    appcast_build="$(sed -n 's/.*<sparkle:version>\([0-9]*\)<\/sparkle:version>.*/\1/p' "${APPCAST_FILE}" | head -n 1)"
+    appcast_build="${appcast_build:-0}"
+  fi
+
+  max_build="${git_commits}"
+  if [[ "${plist_build}" =~ ^[0-9]+$ && "${plist_build}" -gt "${max_build}" ]]; then
+    max_build="${plist_build}"
+  fi
+  if [[ "${appcast_build}" =~ ^[0-9]+$ && "${appcast_build}" -gt "${max_build}" ]]; then
+    max_build="${appcast_build}"
+  fi
+
+  if [[ -n "${BUILD_OVERRIDE}" ]]; then
+    target_build="${BUILD_OVERRIDE}"
+  elif [[ -n "${BUMP_MODE}" || "${target_marketing}" != "${current_marketing}" ]]; then
+    # Ensure a version bump always advances the build number beyond any previously recorded build
+    if [[ "${git_commits}" -gt "${max_build}" ]]; then
+      target_build="${git_commits}"
+    else
+      target_build=$((max_build + 1))
+    fi
+  else
+    target_build="${max_build}"
+  fi
+
+  VERSION_OVERRIDE="${target_marketing}"
+  BUILD_OVERRIDE="${target_build}"
+
+  if [[ "${AUTO_VERSION}" == "1" || -n "${BUMP_MODE}" ]]; then
+    log "Synchronizing project version: ${target_marketing} (build ${target_build})"
+    python3 - "${pbxproj}" "${target_marketing}" <<'PY'
+import re, sys
+path, ver = sys.argv[1:]
+with open(path, "r", encoding="utf-8") as f:
+    text = f.read()
+text = re.sub(r"MARKETING_VERSION = [^;]+;", f"MARKETING_VERSION = {ver};", text)
+with open(path, "w", encoding="utf-8") as f:
+    f.write(text)
+PY
+    plist_set "${src_plist}" CFBundleVersion "${target_build}"
+
+    if [[ -f "${changelog}" ]] && ! grep -q "^## Version ${target_marketing}" "${changelog}"; then
+      python3 - "${changelog}" "${target_marketing}" <<'PY'
+import sys
+path, ver = sys.argv[1:]
+with open(path, "r", encoding="utf-8") as f:
+    text = f.read()
+header = f"# Changelog\n\n## Version {ver}\n- Maintenance and stability improvements.\n"
+if text.startswith("# Changelog"):
+    text = text.replace("# Changelog\n", header, 1)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+PY
+    fi
+  fi
 }
 
 ensure_sparkle_sign_update() {
@@ -292,6 +438,7 @@ require_cmd shasum
 require_cmd cp
 require_cmd ln
 require_cmd rm
+require_cmd python3
 
 APP_SIGNED=false
 APP_NOTARIZED=false
@@ -318,6 +465,11 @@ if [[ -n "${APP_SIGN_IDENTITY}" ]]; then
   require_cmd codesign
 fi
 
+if [[ "${PUBLISH_RELEASE}" == "1" ]]; then
+  require_cmd git
+  require_cmd gh
+fi
+
 if [[ -z "${ENTITLEMENTS_SOURCE}" && -f "${DEFAULT_ENTITLEMENTS_FILE}" ]]; then
   ENTITLEMENTS_SOURCE="${DEFAULT_ENTITLEMENTS_FILE}"
 fi
@@ -336,6 +488,9 @@ fi
 if [[ "${OPEN_OUTPUT}" == "1" ]]; then
   require_cmd open
 fi
+
+# Synchronize and compute version + monotonic build number before building
+manage_project_version
 
 log "Cleaning previous artifacts"
 rm -rf "${WORK_DIR}" "${DIST_DIR}"
@@ -441,6 +596,7 @@ if [[ "${APP_ONLY}" == "1" ]]; then
 
   log "Done"
   echo "App: ${FINAL_APP}"
+  echo "Version: ${APP_VERSION} (${APP_BUILD})"
   echo "App executable SHA256: ${APP_EXEC_SHA256}"
   echo "Checksum file: ${APP_SHA_FILE}"
   echo "Manifest: ${MANIFEST_FILE}"
@@ -515,7 +671,7 @@ content = re.sub(r'length="[^"]*"', f'length="{length}"', content, count=1)
 with open(appcast_path, "w", encoding="utf-8") as f:
     f.write(content)
 PY
-    echo "Updated ${APPCAST_FILE} with edSignature=${SPARKLE_ED_SIG} and length=${DMG_LENGTH}"
+    echo "Updated ${APPCAST_FILE} for v${APP_VERSION} (${APP_BUILD}) with edSignature=${SPARKLE_ED_SIG} and length=${DMG_LENGTH}"
   else
     echo "Warning: Sparkle sign_update did not return a signature; appcast.xml was not modified." >&2
   fi
@@ -524,7 +680,28 @@ fi
 MANIFEST_FILE="${DIST_DIR}/${ARTIFACT_BASENAME}.build-manifest.json"
 write_manifest "${MANIFEST_FILE}" "$(basename "${FINAL_DMG}")" "${DMG_SHA256}" "${SPARKLE_ED_SIG}"
 
+if [[ "${PUBLISH_RELEASE}" == "1" ]]; then
+  log "Publishing v${APP_VERSION} (${APP_BUILD}) to GitHub"
+  git -C "${ROOT_DIR}" add "${PBXPROJ_FILE}" "${SOURCE_INFO_PLIST}" "${APPCAST_FILE}" "${CHANGELOG_FILE}"
+  if ! git -C "${ROOT_DIR}" diff --cached --quiet; then
+    git -C "${ROOT_DIR}" commit -m "Release Past Due v${APP_VERSION} (${APP_BUILD})"
+  fi
+  if ! git -C "${ROOT_DIR}" rev-parse "v${APP_VERSION}" >/dev/null 2>&1; then
+    git -C "${ROOT_DIR}" tag -a "v${APP_VERSION}" -m "Past Due ${APP_VERSION}"
+  fi
+  git -C "${ROOT_DIR}" push origin main --follow-tags
+  if gh release view "v${APP_VERSION}" --repo michaelstonis/Past-Due >/dev/null 2>&1; then
+    gh release upload "v${APP_VERSION}" "${FINAL_DMG}" "${DMG_SHA_FILE}" --clobber --repo michaelstonis/Past-Due
+  else
+    gh release create "v${APP_VERSION}" "${FINAL_DMG}" "${DMG_SHA_FILE}" \
+      --repo michaelstonis/Past-Due \
+      --title "Past Due ${APP_VERSION}" \
+      --notes-file "${ROOT_DIR}/${CHANGELOG_FILE}"
+  fi
+fi
+
 log "Done"
+echo "Version: ${APP_VERSION} (Build ${APP_BUILD})"
 echo "DMG: ${FINAL_DMG}"
 echo "DMG SHA256: ${DMG_SHA256}"
 if [[ -n "${SPARKLE_ED_SIG}" ]]; then
