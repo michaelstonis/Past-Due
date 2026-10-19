@@ -28,6 +28,18 @@
 /* Update date sorting option. Displayed in menu with title: 'Sort By' -> 'Date' */
 "DateSortOption" = "Date";
 
+/* Alert text shown when Past Due cannot monitor a configured app scan directory. The first placeholder is the directory path, the second is the localized system error. */
+"DirectoryObservationFailedAlertMessage" = "Past Due could not monitor this app folder for changes:\n%@\n\nReason: %@\n\nPast Due will continue with a one-time scan, but changes in this folder may not be detected automatically.";
+
+/* Title of alert shown when Past Due cannot monitor a configured app scan directory. */
+"DirectoryObservationFailedAlertTitle" = "Couldn’t Monitor App Folder";
+
+/* Error shown when Past Due cannot start recursive monitoring for a configured app scan directory. */
+"DirectoryObservationUnavailableError" = "Past Due could not start recursive monitoring for this folder.";
+
+/* Additional suggestion shown when the app likely lacks permission to observe a scan directory. */
+"DirectoryObservationFailedPermissionSuggestion" = "If this looks like a permissions problem, review macOS Privacy & Security settings and folder access for Past Due.";
+
 /* Update progress state of downloading an update. The first %@ stands for the already downloaded bytes, the second one for the total amount of bytes. One expected output would be 'Downloading 3 MB of 21 MB' */
 "DownloadingUpdateStatus" = "Downloading %@ of %@";
 
@@ -87,6 +99,9 @@
 
 /* Action to open the app. */
 "OpenAction" = "Open";
+
+/* Default button for dismissing an informational alert. */
+"OKAction" = "OK";
 
 /* Short description of error that no release notes were found. */
 "ReleaseNotesUnavailableError" = "No Release Notes";
@@ -152,10 +167,10 @@
 "UpdateAllToolbarItemToolTip" = "Update all Apps";
 
 /* Shown when the update helper is not installed. */
-"InstallHelperNotFoundErrorDescription" = "To install App Store updates within Latest, a helper must be installed. If you don't want to install the helper, you can update apps via the App Store manually.";
+"InstallHelperNotFoundErrorDescription" = "To install App Store updates within Past Due, a helper must be installed. If you don't want to install the helper, you can update apps via the App Store manually.";
 
 /* Shown when the update helper is installed but disabled, requiring approval. */
-"InstallHelperRequiresApprovalErrorDescription" = "Enable the update helper in Settings to install updates within Latest.";
+"InstallHelperRequiresApprovalErrorDescription" = "Enable the update helper in Settings to install updates within Past Due.";
 
 /* Title of the alert prompting to install or enable the update helper */
 "UpdateInstallHelperAlert.Title" = "Update Helper Required";
@@ -176,4 +191,4 @@
 "UpdateInstallHelperAlert.Cancel" = "Cancel";
 
 /* Short description of an error when communicating with the apps install helper. */
-"InstallHelperCommunicationFailedError" = "Latest failed to update this app because a problem with the helper application.";
+"InstallHelperCommunicationFailedError" = "Past Due failed to update this app because a problem with the helper application.";

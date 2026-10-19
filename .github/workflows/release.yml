@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build DMG package
+        run: |
+          chmod +x scripts/build_dmg.sh
+          APP_SIGN_IDENTITY="-" ./scripts/build_dmg.sh
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/*.sha256
+            dist/*.build-manifest.json
+          generate_release_notes: true

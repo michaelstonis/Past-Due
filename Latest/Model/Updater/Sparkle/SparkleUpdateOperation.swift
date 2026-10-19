@@ -12,32 +12,25 @@ import Sparkle
 /// The operation updating Sparkle apps.
 class SparkleUpdateOperation: UpdateOperation, @unchecked Sendable {
 	
+	/// The app bundle location discovered by Latest.
+	private let bundleURL: URL
+	
 	/// The updater used to update this app.
 	private var updater: SPUUpdater?
 	
 	// Callback to be called when the operation has been cancelled
 	fileprivate var cancellationCallback: (() -> Void)?
 	
-	/// Schedules an progress update notification.
-	private let progressScheduler: DispatchSourceUserDataAdd
+	/// Pending throttled progress work item.
+	private var pendingProgressWorkItem: DispatchWorkItem?
+	
+	/// Last time a download progress state update was emitted.
+	private var lastProgressUpdateTime: TimeInterval = 0
 	
 	/// Initializes the operation with the given Sparkle app and handler
-	override init(bundleIdentifier: String, appIdentifier: App.Bundle.Identifier) {
-		self.progressScheduler = DispatchSource.makeUserDataAddSource(queue: .global())
+	init(bundleURL: URL, bundleIdentifier: String, appIdentifier: App.Bundle.Identifier) {
+		self.bundleURL = bundleURL
 		super.init(bundleIdentifier: bundleIdentifier, appIdentifier: appIdentifier)
-
-		// Delay notifying observers to only let that notification occur in a certain interval
-		self.progressScheduler.setEventHandler() { [weak self] in
-			guard let self = self else { return }
-			
-			// Notify the progress state
-			self.progressState = .downloading(loadedSize: Int64(self.receivedLength), totalSize: Int64(self.expectedContentLength))
-
-			// Delay the next call for 1 second
-			Thread.sleep(forTimeInterval: 1)
-		}
-		
-		self.progressScheduler.activate()
 	}
 	
 	
@@ -47,7 +40,7 @@ class SparkleUpdateOperation: UpdateOperation, @unchecked Sendable {
 		super.execute()
 		
 		// Gather app and app bundle
-		guard let bundle = Bundle(identifier: self.bundleIdentifier) else {
+		guard let bundle = Bundle(path: self.bundleURL.path) else {
 			self.finish(with: LatestError.updateInfoUnavailable)
 			return
 		}
@@ -76,7 +69,9 @@ class SparkleUpdateOperation: UpdateOperation, @unchecked Sendable {
 	}
 	
 	override func finish() {
-		// Cleanup updater
+		// Cleanup pending progress updates and updater
+		self.pendingProgressWorkItem?.cancel()
+		self.pendingProgressWorkItem = nil
 		self.updater = nil
 		
 		super.finish()
@@ -169,13 +164,32 @@ extension SparkleUpdateOperation: SPUUserDriver {
 	}
 	
 	private func scheduleProgressHandler() {
-		self.progressScheduler.add(data: 1)
+		let now = ProcessInfo.processInfo.systemUptime
+		let elapsed = now - self.lastProgressUpdateTime
+		
+		if elapsed >= 0.25 {
+			self.pendingProgressWorkItem?.cancel()
+			self.pendingProgressWorkItem = nil
+			self.lastProgressUpdateTime = now
+			self.progressState = .downloading(loadedSize: Int64(self.receivedLength), totalSize: Int64(self.expectedContentLength))
+		} else if self.pendingProgressWorkItem == nil {
+			let workItem = DispatchWorkItem { [weak self] in
+				guard let self, !self.isFinished, !self.isCancelled else { return }
+				self.pendingProgressWorkItem = nil
+				self.lastProgressUpdateTime = ProcessInfo.processInfo.systemUptime
+				self.progressState = .downloading(loadedSize: Int64(self.receivedLength), totalSize: Int64(self.expectedContentLength))
+			}
+			self.pendingProgressWorkItem = workItem
+			DispatchQueue.main.asyncAfter(deadline: .now() + (0.25 - elapsed), execute: workItem)
+		}
 	}
 
 	
 	// MARK: - Installing Update
 	
 	func showDownloadDidStartExtractingUpdate() {
+		self.pendingProgressWorkItem?.cancel()
+		self.pendingProgressWorkItem = nil
 		self.progressState = .extracting(progress: 0)
 	}
 	

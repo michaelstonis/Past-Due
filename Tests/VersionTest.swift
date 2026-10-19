@@ -183,6 +183,15 @@ class VersionTest: XCTestCase {
 		self.newer(v1, v2)
 	}
 	
+	func testSymmetricComparisonWhenOneBuildMatchesVersion() {
+		// Issue #8 / Upstream #549: When local app has a compact date buildNumber ("20260215") != versionNumber ("2026.2.15")
+		// and remote has buildNumber == versionNumber ("2026.2.19"), comparison must use versionNumber symmetrically.
+		let local = Version(versionNumber: "2026.2.15", buildNumber: "20260215")
+		let remote = Version(versionNumber: "2026.2.19", buildNumber: "2026.2.19")
+		self.older(local, remote)
+		self.newer(remote, local)
+	}
+	
 	
     // MARK: - Helper Methods
     

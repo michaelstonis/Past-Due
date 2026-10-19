@@ -161,11 +161,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		guard row >= 0 && row < self.apps.count else { return nil }
 		
 		if self.snapshot.isSectionHeader(at: row) {
-			guard let view = tableView.rowView(atRow: row, makeIfNecessary: false) else {
-				return UpdateGroupRowView()
-			}
-			
-			return view
+			return UpdateGroupRowView()
 		}
 		
 		return nil
@@ -506,41 +502,44 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		
 		// Iterate both states
 		while i < state.count || j < newValue.count {
-			self.tableView.reloadData(forRowIndexes: IndexSet(integer: i), columnIndexes: IndexSet(integer: 0))
-			
-			// Skip identical items
-			if i < state.count && j < newValue.count && state[i].isSimilar(to: newValue[j]) {
-				i += 1
-				j += 1
-				continue
-			}
-			
 			// Remove deleted elements
-			if i < state.count && !newValue.contains(state[i]) {
+			if i < state.count && !newValue.contains(where: { $0.isSimilar(to: state[i]) }) {
 				self.tableView.removeRows(at: IndexSet(integer: i), withAnimation: [.slideUp, .effectFade])
 				state.remove(at: i)
 				continue
 			}
 			
+			// Skip identical/similar items at the same position and reload their content
+			if i < state.count && j < newValue.count && state[i].isSimilar(to: newValue[j]) {
+				state[i] = newValue[j]
+				self.tableView.reloadData(forRowIndexes: IndexSet(integer: i), columnIndexes: IndexSet(integer: 0))
+				i += 1
+				j += 1
+				continue
+			}
+			
 			// Move existing elements
-			if let index = state.firstIndex(of: newValue[i]) {
+			if j < newValue.count, let index = state.firstIndex(where: { $0.isSimilar(to: newValue[j]) }) {
 				let newIndex = i - (index < i ? 1 : 0)
 				self.tableView.moveRow(at: index, to: newIndex)
 				
 				state.remove(at: index)
 				state.insert(newValue[j], at: newIndex)
+				self.tableView.reloadData(forRowIndexes: IndexSet(integer: newIndex), columnIndexes: IndexSet(integer: 0))
 				
 				i += 1
 				j += 1
 				continue
 			}
 			
-			// insert new elements
-			self.tableView.insertRows(at: IndexSet(integer: i), withAnimation: [.slideDown, .effectFade])
-			state.insert(newValue[j], at: i)
-			
-			i += 1
-			j += 1
+			// Insert new elements
+			if j < newValue.count {
+				self.tableView.insertRows(at: IndexSet(integer: i), withAnimation: [.slideDown, .effectFade])
+				state.insert(newValue[j], at: i)
+				
+				i += 1
+				j += 1
+			}
 		}
 		
 		self.tableView.endUpdates()

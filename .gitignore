@@ -6,7 +6,12 @@
 
 ## Build generated
 build/
+.build/
+dist/
 DerivedData/
+.signing.env
+*.p12
+*.cer
 
 ## Various settings
 *.pbxuser

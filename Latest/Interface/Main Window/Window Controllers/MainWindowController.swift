@@ -50,14 +50,16 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 		return progressIndicator
 	}()
     
-    /// The button that triggers an reload/recheck for updates
+	/// The button that triggers an reload/recheck for updates
     @IBOutlet weak var reloadTouchBarButton: NSButton!
+
+	private var presentedObservationFailures = Set<String>()
     
     override func windowDidLoad() {
         super.windowDidLoad()
     
 		self.window?.titlebarAppearsTransparent = true
-		self.window?.title = Bundle.main.localizedInfoDictionary?[kCFBundleNameKey as String] as! String
+		self.window?.title = (Bundle.main.localizedInfoDictionary?[kCFBundleNameKey as String] ?? Bundle.main.infoDictionary?[kCFBundleNameKey as String]) as? String ?? "Past Due"
 		self.window?.toolbarStyle = .unified
 		
 		// Set ourselves as the view menu delegate
@@ -118,7 +120,7 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 	}
     
 	@IBAction func visitWebsite(_ sender: NSMenuItem?) {
-		NSWorkspace.shared.open(URL(string: "https://max.codes/latest")!)
+		NSWorkspace.shared.open(URL(string: "https://github.com/michaelstonis/Past-Due")!)
     }
 	
 	@IBAction func donate(_ sender: NSMenuItem?) {
@@ -213,6 +215,21 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 		self.isRunningUpdateCheck = false
 		self.window?.toolbar?.validateVisibleItems()
 	}
+
+	func updateChecker(_ updateChecker: UpdateCheckCoordinator, didFailToObserveDirectoryAt url: URL, error: Error) {
+		let failureKey = "\(url.path)|\(error.localizedDescription)"
+		guard presentedObservationFailures.insert(failureKey).inserted else { return }
+		NSApplication.shared.requestUserAttention(.informationalRequest)
+		
+		guard let window = self.window else { return }
+		
+		let alert = NSAlert()
+		alert.alertStyle = .warning
+		alert.messageText = NSLocalizedString("DirectoryObservationFailedAlertTitle", comment: "Title of alert shown when Past Due cannot monitor a configured app scan directory.")
+		alert.informativeText = self.directoryObservationFailureMessage(for: url, error: error)
+		alert.addButton(withTitle: NSLocalizedString("OKAction", comment: "Default button for dismissing an informational alert."))
+		alert.beginSheetModal(for: window)
+	}
     
 	
 	// MARK: - Actions
@@ -266,12 +283,26 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
             self.listViewController.selectApp(at: nil)
         }
     }
+
+	private func directoryObservationFailureMessage(for url: URL, error: Error) -> String {
+		let format = NSLocalizedString("DirectoryObservationFailedAlertMessage", comment: "Alert text shown when Past Due cannot monitor a configured app scan directory. The first placeholder is the directory path, the second is the localized system error.")
+		var message = String.localizedStringWithFormat(format, url.path, error.localizedDescription)
+		
+		let nsError = error as NSError
+		if nsError.domain == NSPOSIXErrorDomain,
+		   let code = POSIXErrorCode(rawValue: Int32(nsError.code)),
+		   code == .EACCES || code == .EPERM {
+			let recovery = NSLocalizedString("DirectoryObservationFailedPermissionSuggestion", comment: "Additional suggestion shown when the app likely lacks permission to observe a scan directory.")
+			message += "\n\n\(recovery)"
+		}
+		
+		return message
+	}
 	
 }
 
 extension MainWindowController: NSWindowDelegate {
 	
-	@available(macOS, deprecated: 11.0)
 	func window(_ window: NSWindow, willPositionSheet sheet: NSWindow, using rect: NSRect) -> NSRect {
 		// Always position sheets at the top of the window, ignoring toolbar insets
 		return NSRect(x: rect.minX, y: window.frame.height, width: rect.width, height: rect.height)

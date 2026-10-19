@@ -57,6 +57,6 @@ class SupportStatusInfoViewController: NSViewController {
 	
 	/// Opens the issue page on GitHub.
 	@IBAction func reportIssue(_ sender: NSButton) {
-		NSWorkspace.shared.open(URL(string: "https://github.com/mangerlahn/Latest/issues")!)
+		NSWorkspace.shared.open(URL(string: "https://github.com/michaelstonis/Past-Due/issues")!)
 	}
 }

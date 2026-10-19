@@ -162,6 +162,9 @@ extension AppStoreUpdateCheckerOperation {
 			URLQueryItem(name: "country", value: languageCode),
 			URLQueryItem(name: "bundleId", value: self.app.bundleIdentifier)
 		]
+		if let storefrontLanguage = Self.storefrontLanguageIdentifier() {
+			components?.queryItems?.append(URLQueryItem(name: "lang", value: storefrontLanguage))
+		}
 		guard let url = components?.url else {
 			completion(.failure(MalformedURLError))
 			return
@@ -190,6 +193,25 @@ extension AppStoreUpdateCheckerOperation {
 		}
 		
 		dataTask.resume()
+	}
+
+	/// Returns the App Store Search API language override for the user's preferred language, if supported.
+	///
+	/// The Search API documents `en_us` and `ja_jp` as supported explicit language values.
+	static func storefrontLanguageIdentifier(preferredLanguages: [String] = Locale.preferredLanguages) -> String? {
+		guard let preferredLanguage = preferredLanguages.first else {
+			return nil
+		}
+
+		let languageCode = Locale.Components(identifier: preferredLanguage).languageComponents.languageCode?.identifier.lowercased()
+		switch languageCode {
+		case "en":
+			return "en_us"
+		case "ja":
+			return "ja_jp"
+		default:
+			return nil
+		}
 	}
 		
 }

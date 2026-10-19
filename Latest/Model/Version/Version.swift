@@ -64,11 +64,15 @@ struct Version : Hashable, Comparable {
 	
 	/// Performs the actual check. This version checker is adopted by the Sparkle Framework and slightly adapted.
 	private static func compare(_ lhs: Version, _ rhs: Version) -> CheckingResult {
+		if lhs.isEmpty && rhs.isEmpty {
+			return .equal
+		}
+
 		var v1 : String?
 		var v2 : String?
 		
-		// Only allow build number checks if build- and version number actually differ
-		let allowBuildNumberCheck = lhs.buildNumber != lhs.versionNumber
+		// Only allow build number checks if build- and version number actually differ on both versions (or if a version number is nil)
+		let allowBuildNumberCheck = (lhs.buildNumber != lhs.versionNumber && rhs.buildNumber != rhs.versionNumber) || lhs.versionNumber == nil || rhs.versionNumber == nil
 		if allowBuildNumberCheck, let b1 = lhs.buildNumber, let b2 = rhs.buildNumber {
 			v1 = b1
 			v2 = b2

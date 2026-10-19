@@ -36,5 +36,7 @@
 	<string>com.stoplight.studio</string>
 	<string>TH.Clock-Signal</string>
 	<string>com.getflywheel.lightning.local</string>
+	<string>com.halfbuttonpress.PastDue</string>
+	<string>com.max-langer.Latest</string>
 </array>
 </plist>

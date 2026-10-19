@@ -1,0 +1,24 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Past Due</title>
+        <item>
+            <title>1.0.0</title>
+            <pubDate>Sat, 17 Oct 2026 10:00:00 -0500</pubDate>
+            <sparkle:version>1000</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <h2>Past Due 1.0.0</h2>
+                <p>First release of <strong>Past Due</strong>, a community-maintained continuation of Max Langer's <em>Latest</em>.</p>
+                <ul>
+                    <li>Incorporates upstream <code>0.12-beta</code> privileged background installer helper for Mac App Store updates on macOS 15.7+ and macOS 26+</li>
+                    <li>Direct in-app Homebrew Cask updates via <code>brew upgrade --cask</code></li>
+                    <li>Improved Homebrew Cask bundle-ID matching and false-positive prevention</li>
+                    <li>Fixes for launch crashes, NSTableView row reuse crashes, DisplayLink sleep/wake crashes, and recursive FSEvents folder monitoring</li>
+                </ul>
+            ]]></description>
+            <enclosure url="https://github.com/michaelstonis/Past-Due/releases/download/v1.0.0/Past-Due-1.0.0.dmg" length="0" type="application/octet-stream"/>
+        </item>
+    </channel>
+</rss>

@@ -4,18 +4,16 @@
 <dict>
 	<key>SpawnConstraint</key>
 	<dict>
-		<key>team-identifier</key>
-		<string>VFABJ5RE5Q</string>
 		<key>signing-identifier</key>
-		<string>com.max-langer.latest.UpdateInstaller</string>
+		<string>com.halfbuttonpress.PastDue.UpdateInstaller</string>
 	</dict>
 	<key>BundleProgram</key>
-	<string>Contents/Resources/LatestUpdateInstaller</string>
+	<string>Contents/Resources/PastDueUpdateInstaller</string>
 	<key>Label</key>
-	<string>com.max-langer.latest.UpdateInstaller</string>
+	<string>com.halfbuttonpress.PastDue.UpdateInstaller</string>
 	<key>MachServices</key>
 	<dict>
-		<key>com.max-langer.latest.UpdateInstaller</key>
+		<key>com.halfbuttonpress.PastDue.UpdateInstaller</key>
 		<true/>
 	</dict>
 	<key>RunAtLoad</key>

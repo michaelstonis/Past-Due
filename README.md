@@ -1,69 +1,57 @@
-# Latest
+# Past Due
 
-[![Translation status][image-1]][1]
+> **A Reverent Continuation of [Latest](https://github.com/mangerlahn/Latest)**
+>
+> **Past Due** is an actively maintained fork and continuation of [**Latest**](https://github.com/mangerlahn/Latest), originally created and lovingly crafted by [**Max Langer**](https://max.codes) (`@mangerlahn`). Because the original *Latest* repository is no longer actively maintained, *Past Due* carries forward Max's vision, design, and final unreleased `0.12` work—fixing community-reported issues, modernizing for macOS Sequoia (15) and macOS Tahoe (26+), and adding direct Homebrew Cask update support.
+>
+> All credit for the foundational architecture, user interface, and years of stewardship belongs to [Max Langer](https://github.com/mangerlahn) and the original [Latest contributors](https://github.com/mangerlahn/Latest/graphs/contributors). If you appreciate the years of work that made this app possible, please consider [supporting Max Langer directly](https://max.codes/latest/donate/).
 
-This is Latest, a small utility app for the Mac. Latest is a free and open-source app for macOS that checks if your apps are up to date. Get a quick overview of which apps changed and what changed and update them right away. Latest currently supports apps downloaded from the Mac App Store and those that use Sparkle for updates.
+---
 
-Latest is developed in my free time, so occasional updates may happen. Take a look at the [Issues][2] section to see what's coming. If you have an idea for a new feature, or encounter any bugs, feel free to open a new issue.
-I am thankful for contributions. Check out the section below for more information.
+**Past Due** is a free and open-source utility app for macOS that checks if all of your installed apps are up to date. Get a quick, unified overview of which apps have updates waiting, read their release notes, and update them right away.
 
-![Latest][image-2]
+Past Due supports:
+- **Mac App Store** apps (including a privileged background installer helper for macOS 15.7+ and macOS 26+)
+- **Sparkle**-powered macOS apps
+- **Homebrew Cask** apps (both version checking against the Homebrew Cask repository and direct in-app updates via `brew upgrade --cask` when Homebrew is installed)
+
+![Past Due](./latest.png)
+
+## System Requirements
+
+- **macOS 15.0 (Sequoia)** or later (including **macOS 26 Tahoe** and **macOS 27**)
 
 ## Installation
 
-There are multiple ways to install the app.
-
 ### Download the App
 
-The easiest way to install Latest is to [download][3] the latest release as an app. You unzip the download by double-clicking on it (if that does not happen automatically) and then move the `Latest.app` into the `Applications` folder.
-
-If you would like to check out earlier versions, head over to the [Releases][4] page to browse the history of Latest.
-
-### Homebrew Cask
-
-Latest can also be installed via [Homebrew Cask][5]. If you have not installed Homebrew, follow the simple instructions [here][6].
-After that, run `brew install --cask latest` to install the current version of Latest.
+Download the latest `Past-Due.dmg` or `.zip` archive from the [Releases](https://github.com/michaelstonis/Past-Due/releases) page, open it, and drag **Past Due.app** into your `/Applications` folder.
 
 ### Build from Source
 
-**To build Latest, Xcode 11 and Swift 5 is required.**
+**Xcode 16+ (or Xcode 26+) and Swift 5/6 are required.**
 
-You can build Latest directly on your machine. To do that, you have to download the source code by cloning the repository: `git clone --recurse-submodules git@github.com:mangerlahn/Latest.git`.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/michaelstonis/Past-Due.git
+   cd Past-Due
+   ```
+2. Build a release `.app` and `.dmg` using the packaging script:
+   ```bash
+   ./scripts/build_dmg.sh
+   ```
+   Or open `Latest.xcodeproj` in Xcode, select the **Latest** scheme, and hit **Build and Run** (`⌘R`). See [BUILD.md](./BUILD.md) for detailed build and code-signing instructions.
 
-Then you can open the `Latest.xcodeproj` and hit *Build and Run*. Make sure that the `Latest` scheme is selected.
+## Contributing & Issues
 
-## Contribution
-
-I am thankful for all contributions to the project. You can contribute typo-fixes, translations, code and of course suggestions, wishes, and bug reports.
+Have an idea for an improvement or encountered a bug? Check out the [Issues](https://github.com/michaelstonis/Past-Due/issues) page! High-priority issues and community pull requests from the original `mangerlahn/Latest` repository have been triaged and migrated here.
 
 ### Translations
 
-The text used in Latest is hosted by the kind people over at [Weblate][7]. If you would like to add a new language, or improve an existing one, [here][8] is your starting point.
+Original localizations were contributed by the community via [Weblate](https://hosted.weblate.org/engage/latest/). Translation improvements and pull requests are always welcome.
 
-[![Translation status][image-3]][9]
+## License & Credits
 
-### Code
-
-Take a look at the [Issues][10] section to see what you can do. If you have your own idea, and it does not appear in the issues list, please add it first. I don't think that I would reject any pull request, but it is useful to know about your idea earlier. Imagine two people have the same idea at the same time and both put a lot of work into that just to find out that someone else has made the same when it's too late.  
-
-I would like to assign every issue to the person working on that particular thing, so if you would like to implement something, leave a small note in the issue. I will assign the issue to you and it's yours.
-
-## Donation
-
-As mentioned above, Latest is free for you to use. I work on the app in my spare time. If you would like to support the development by donating, you can do so [here][11].
-
-[1]:	https://hosted.weblate.org/engage/latest/
-[2]:	https://github.com/mangerlahn/latest/issues
-[3]:	https://max.codes/latest/Latest.zip
-[4]:	https://github.com/mangerlahn/Latest/releases
-[5]:	https://github.com/Homebrew/homebrew-cask
-[6]:	https://brew.sh
-[7]:	https://weblate.org/
-[8]:	https://hosted.weblate.org/engage/latest/
-[9]:	https://hosted.weblate.org/engage/latest/
-[10]:	https://github.com/mangerlahn/latest/issues
-[11]:	https://max.codes/latest/donate
-
-[image-1]:	https://hosted.weblate.org/widgets/latest/-/svg-badge.svg
-[image-2]:	./latest.png
-[image-3]:	https://hosted.weblate.org/widgets/latest/-/multi-auto.svg
+- **Original Author**: [Max Langer](https://max.codes) — Creator of [Latest](https://github.com/mangerlahn/Latest) (Copyright © 2017–2026 Max Langer)
+- **Continuation Maintainer**: [Michael Stonis](https://github.com/michaelstonis) (Copyright © 2026 Michael Stonis)
+- Licensed under the [MIT License](./LICENSE).

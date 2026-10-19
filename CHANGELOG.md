@@ -1,4 +1,24 @@
-# Unreleased Changes
+# 1.0.0 (Past Due)
+First release of **Past Due**, a community-maintained continuation of [Max Langer](https://max.codes)'s [**Latest**](https://github.com/mangerlahn/Latest), which is no longer actively maintained upstream.
+
+#### Highlights & Upstream `0.12-beta` Integration:
+- Incorporates Max Langer's unreleased `0.12-beta` (`develop`) work, including the privileged background helper (`PastDueUpdateInstaller`) for Mac App Store updates on macOS 15.7+ and macOS 26+, macOS Tahoe Liquid Glass UI refinements, and updated localizations.
+- Raises minimum deployment target to **macOS 15.0 (Sequoia)** and upgrades **Sparkle** to `2.10.0`.
+- **Direct Homebrew Cask Updates**: Apps installed via Homebrew Cask can now be updated directly within Past Due using `brew upgrade --cask` (#9 / upstream PR #607).
+- **Improved Homebrew Bundle-ID Matching**: Matches apps against Homebrew Casks by bundle identifier and plausibility rules to eliminate false-positive updates (#10 / upstream PR #606).
+- **Localized Mac App Store Release Notes**: Fetches App Store metadata using your preferred storefront language when available (#12 / upstream PR #568).
+
+#### Stability & Bug Fixes:
+- Fixed a launch crash caused by empty `osVersion` strings or malformed entries in the Homebrew Cask JSON catalog (#1 / upstream #579, PR #584).
+- Fixed an `NSTableView` exception (`RowView cannot be inserted twice`) during rapid app list updates (#2 / upstream #588).
+- Replaced force-unwrapped `PropertyListSerialization` decoding when loading excluded app identifiers (#3 / upstream #572).
+- Replaced deprecated `CVDisplayLink` with `CADisplayLink` and a fallback timer to prevent crashes when waking from display sleep (#4 / upstream #592).
+- Fixed `SparkleUpdateOperation` progress throttling, thread safety, and timer lifecycle leaks (#5 / upstream #601).
+- Fixed a retain cycle in `AppDataStore` observer closures (#6 / upstream PR #605).
+- Replaced non-recursive `DispatchSource` folder watching with recursive `FSEvents` monitoring and balanced `DispatchGroup` calls in `BundleCollector` (#7 / upstream #316, PR #565).
+- Fixed asymmetric build-number comparison in `Version` that caused false-positive updates when build numbers differed in format from marketing versions (#8 / upstream #549).
+- Fixed Sparkle `SUFeedURL` lookup when app bundle paths contain spaces or non-ASCII characters (#11 / upstream PR #569).
+- Added deterministic path tie-breaker sorting for duplicate app bundles (#13 / upstream #507).
 
 # 0.10.3
 Fixes a crash that may occur after updating to 0.10.2.

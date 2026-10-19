@@ -15,7 +15,7 @@ actor InstallHelper {
 	/// The shared instance used for installing packages.
 	static let shared = InstallHelper()
 	
-	private static let installHelperName = "com.max-langer.latest.UpdateInstaller"
+	private static let installHelperName = "com.halfbuttonpress.PastDue.UpdateInstaller"
 	
 	private init() {}
 	

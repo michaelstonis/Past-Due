@@ -78,10 +78,17 @@ struct AppListSnapshot {
 		let filteredApps = visibleApps.sorted(by: { (app1, app2) -> Bool in
 			switch AppListSettings.shared.sortOrder {
 			case .updateDate:
-				return app1.updateDate > app2.updateDate
+				if app1.updateDate != app2.updateDate {
+					return app1.updateDate > app2.updateDate
+				}
 			case .name:
-				return app1.name.lowercased() < app2.name.lowercased()
+				let lower1 = app1.name.lowercased()
+				let lower2 = app2.name.lowercased()
+				if lower1 != lower2 {
+					return lower1 < lower2
+				}
 			}
+			return app1.fileURL.path < app2.fileURL.path
 		})
 		
 		// Build final list. This is a very inefficient solution. Find a better one

@@ -33,8 +33,8 @@
 		505062242F0DBECC00998F84 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505062202F0DBECC00998F84 /* main.swift */; };
 		505062252F0DBECC00998F84 /* UpdateInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505062212F0DBECC00998F84 /* UpdateInstaller.swift */; };
 		505062262F0DBEE000998F84 /* UpdateInstallerProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505062222F0DBECC00998F84 /* UpdateInstallerProtocol.swift */; };
-		505062292F0DBF0D00998F84 /* com.max-langer.latest.UpdateInstaller.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5050621F2F0DBECC00998F84 /* com.max-langer.latest.UpdateInstaller.plist */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		5050622A2F0DBFD300998F84 /* LatestUpdateInstaller in Resources */ = {isa = PBXBuildFile; fileRef = 505062112F0DBE5900998F84 /* LatestUpdateInstaller */; };
+		505062292F0DBF0D00998F84 /* com.halfbuttonpress.PastDue.UpdateInstaller.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5050621F2F0DBECC00998F84 /* com.halfbuttonpress.PastDue.UpdateInstaller.plist */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		5050622A2F0DBFD300998F84 /* PastDueUpdateInstaller in Resources */ = {isa = PBXBuildFile; fileRef = 505062112F0DBE5900998F84 /* PastDueUpdateInstaller */; };
 		5058BA3A21202BA7003F332B /* IconCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5058BA3921202BA7003F332B /* IconCache.swift */; };
 		5058E9C327863FC80028F564 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5058E9C227863FC80028F564 /* App.swift */; };
 		506A77172D6099FE00A69579 /* SupportStatusInfoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 506A77162D6099F400A69579 /* SupportStatusInfoViewController.swift */; };
@@ -90,6 +90,11 @@
 		50FEB87D2B1BE630006FB75D /* OSVersionTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB87C2B1BE630006FB75D /* OSVersionTest.swift */; };
 		50FEB87F2B1BE67F006FB75D /* VersionSanitizationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB87E2B1BE67E006FB75D /* VersionSanitizationTest.swift */; };
 		50FEB8812B1D2402006FB75D /* ExcludedAppIdentifiers.plist in Resources */ = {isa = PBXBuildFile; fileRef = 50FEB8802B1D2402006FB75D /* ExcludedAppIdentifiers.plist */; };
+		50FEB8832B1D2402006FB75D /* HomebrewUpdateOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8822B1D2402006FB75D /* HomebrewUpdateOperation.swift */; };
+		50FEB8852B1D2402006FB75D /* UpdateRepositoryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8842B1D2402006FB75D /* UpdateRepositoryTest.swift */; };
+		50FEB8872B1D2402006FB75D /* HomebrewUpdateOperationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8862B1D2402006FB75D /* HomebrewUpdateOperationTest.swift */; };
+		50FEB8892B1D2402006FB75D /* AppDataStoreLifecycleTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */; };
+		50FEB88B2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,7 +121,7 @@
 			dstPath = Contents/Library/LaunchDaemons;
 			dstSubfolderSpec = 1;
 			files = (
-				505062292F0DBF0D00998F84 /* com.max-langer.latest.UpdateInstaller.plist in CopyFiles */,
+				505062292F0DBF0D00998F84 /* com.halfbuttonpress.PastDue.UpdateInstaller.plist in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -180,7 +185,7 @@
 		502572EC287CA64900E5ECAF /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		502572ED287CA65300E5ECAF /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		502572F0287CA69700E5ECAF /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = "pt-PT"; path = "pt-PT.lproj/Localizable.stringsdict"; sourceTree = "<group>"; };
-		50290E711E53EB6A00133E3D /* Latest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Latest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		50290E711E53EB6A00133E3D /* Past Due.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Past Due.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		50290E741E53EB6A00133E3D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		50290E781E53EB6A00133E3D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		50290E7B1E53EB6A00133E3D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -211,8 +216,8 @@
 		5048573F22C81DCF00C52C48 /* CommerceKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CommerceKit.framework; path = ../../../../../../System/Library/PrivateFrameworks/CommerceKit.framework; sourceTree = "<group>"; };
 		5048574122C81DF800C52C48 /* StoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreFoundation.framework; path = ../../../../../../System/Library/PrivateFrameworks/StoreFoundation.framework; sourceTree = "<group>"; };
 		504FB4AB2B76CA77009C73E9 /* AppLocationViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLocationViewController.swift; sourceTree = "<group>"; };
-		505062112F0DBE5900998F84 /* LatestUpdateInstaller */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = LatestUpdateInstaller; sourceTree = BUILT_PRODUCTS_DIR; };
-		5050621F2F0DBECC00998F84 /* com.max-langer.latest.UpdateInstaller.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "com.max-langer.latest.UpdateInstaller.plist"; sourceTree = "<group>"; };
+		505062112F0DBE5900998F84 /* PastDueUpdateInstaller */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PastDueUpdateInstaller; sourceTree = BUILT_PRODUCTS_DIR; };
+		5050621F2F0DBECC00998F84 /* com.halfbuttonpress.PastDue.UpdateInstaller.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "com.halfbuttonpress.PastDue.UpdateInstaller.plist"; sourceTree = "<group>"; };
 		505062202F0DBECC00998F84 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		505062212F0DBECC00998F84 /* UpdateInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInstaller.swift; sourceTree = "<group>"; };
 		505062222F0DBECC00998F84 /* UpdateInstallerProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInstallerProtocol.swift; sourceTree = "<group>"; };
@@ -386,6 +391,11 @@
 		50FEB87C2B1BE630006FB75D /* OSVersionTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSVersionTest.swift; sourceTree = "<group>"; };
 		50FEB87E2B1BE67E006FB75D /* VersionSanitizationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionSanitizationTest.swift; sourceTree = "<group>"; };
 		50FEB8802B1D2402006FB75D /* ExcludedAppIdentifiers.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ExcludedAppIdentifiers.plist; sourceTree = "<group>"; };
+		50FEB8822B1D2402006FB75D /* HomebrewUpdateOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomebrewUpdateOperation.swift; sourceTree = "<group>"; };
+		50FEB8842B1D2402006FB75D /* UpdateRepositoryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateRepositoryTest.swift; sourceTree = "<group>"; };
+		50FEB8862B1D2402006FB75D /* HomebrewUpdateOperationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomebrewUpdateOperationTest.swift; sourceTree = "<group>"; };
+		50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataStoreLifecycleTest.swift; sourceTree = "<group>"; };
+		50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreCheckerOperationTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -442,9 +452,9 @@
 		50290E721E53EB6A00133E3D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				50290E711E53EB6A00133E3D /* Latest.app */,
+				50290E711E53EB6A00133E3D /* Past Due.app */,
 				50C81D691FBADC5900324C2E /* Latest Tests.xctest */,
-				505062112F0DBE5900998F84 /* LatestUpdateInstaller */,
+				505062112F0DBE5900998F84 /* PastDueUpdateInstaller */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -480,6 +490,7 @@
 				5039DE8422CA396F0088B39B /* UpdateQueue.swift */,
 				5050723B2F1048FA00AD60A8 /* App Store */,
 				503A5C072F12EB4000471DAA /* Sparkle */,
+				50FEB8822B1D2402006FB75D /* HomebrewUpdateOperation.swift */,
 				5039DE8622CA39C60088B39B /* UpdateOperation.swift */,
 			);
 			path = Updater;
@@ -541,7 +552,7 @@
 		5050621E2F0DBEB700998F84 /* UpdateInstaller */ = {
 			isa = PBXGroup;
 			children = (
-				5050621F2F0DBECC00998F84 /* com.max-langer.latest.UpdateInstaller.plist */,
+				5050621F2F0DBECC00998F84 /* com.halfbuttonpress.PastDue.UpdateInstaller.plist */,
 				505062202F0DBECC00998F84 /* main.swift */,
 				505062212F0DBECC00998F84 /* UpdateInstaller.swift */,
 			);
@@ -746,6 +757,10 @@
 				50C81D731FBADC9100324C2E /* VersionTest.swift */,
 				50E4EB082B17DFCE00A70A7D /* VersionParserTest.swift */,
 				50FEB87E2B1BE67E006FB75D /* VersionSanitizationTest.swift */,
+				50FEB8842B1D2402006FB75D /* UpdateRepositoryTest.swift */,
+				50FEB8862B1D2402006FB75D /* HomebrewUpdateOperationTest.swift */,
+				50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */,
+				50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -871,8 +886,8 @@
 			packageProductDependencies = (
 				509B30ED28DBB17D00DDAA2E /* Sparkle */,
 			);
-			productName = Latest;
-			productReference = 50290E711E53EB6A00133E3D /* Latest.app */;
+			productName = "Past Due";
+			productReference = 50290E711E53EB6A00133E3D /* Past Due.app */;
 			productType = "com.apple.product-type.application";
 		};
 		505062102F0DBE5900998F84 /* UpdateInstaller */ = {
@@ -891,7 +906,7 @@
 			packageProductDependencies = (
 			);
 			productName = UpdateInstaller;
-			productReference = 505062112F0DBE5900998F84 /* LatestUpdateInstaller */;
+			productReference = 505062112F0DBE5900998F84 /* PastDueUpdateInstaller */;
 			productType = "com.apple.product-type.tool";
 		};
 		50C81D681FBADC5900324C2E /* Latest Tests */ = {
@@ -922,11 +937,10 @@
 				CLASSPREFIX = "";
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 1640;
-				ORGANIZATIONNAME = "Max Langer";
+				ORGANIZATIONNAME = "Michael Stonis";
 				TargetAttributes = {
 					50290E701E53EB6A00133E3D = {
 						CreatedOnToolsVersion = 8.3;
-						DevelopmentTeam = VFABJ5RE5Q;
 						LastSwiftMigration = 1020;
 						ProvisioningStyle = Automatic;
 						SystemCapabilities = {
@@ -941,7 +955,6 @@
 					};
 					50C81D681FBADC5900324C2E = {
 						CreatedOnToolsVersion = 9.2;
-						DevelopmentTeam = VFABJ5RE5Q;
 						LastSwiftMigration = 1020;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 50290E701E53EB6A00133E3D;
@@ -1011,7 +1024,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5050622A2F0DBFD300998F84 /* LatestUpdateInstaller in Resources */,
+				5050622A2F0DBFD300998F84 /* PastDueUpdateInstaller in Resources */,
 				50BC19E328230D41005945E8 /* InfoPlist.strings in Resources */,
 				50290E791E53EB6A00133E3D /* Assets.xcassets in Resources */,
 				50C8C85C208A0EE9004FF5D5 /* dsa_pub.pem in Resources */,
@@ -1123,6 +1136,7 @@
 				50C857402B25CF7500F5BF0B /* UpdateRepositoryCache.swift in Sources */,
 				50A8D2B327D2B063004DBA05 /* ReleaseNotesProvider.swift in Sources */,
 				509C4ABC2AD1FFCC00E9C2E1 /* FailableDecodable.swift in Sources */,
+				50FEB8832B1D2402006FB75D /* HomebrewUpdateOperation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1144,6 +1158,10 @@
 				50FEB87D2B1BE630006FB75D /* OSVersionTest.swift in Sources */,
 				50FEB87F2B1BE67F006FB75D /* VersionSanitizationTest.swift in Sources */,
 				50E4EB092B17DFCE00A70A7D /* VersionParserTest.swift in Sources */,
+				50FEB8852B1D2402006FB75D /* UpdateRepositoryTest.swift in Sources */,
+				50FEB8872B1D2402006FB75D /* HomebrewUpdateOperationTest.swift in Sources */,
+				50FEB8892B1D2402006FB75D /* AppDataStoreLifecycleTest.swift in Sources */,
+				50FEB88B2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1375,7 +1393,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = VFABJ5RE5Q;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1393,7 +1411,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -1438,7 +1456,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = VFABJ5RE5Q;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1450,7 +1468,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -1481,9 +1499,10 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.12;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.max-langer.Latest";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.halfbuttonpress.PastDue";
+				PRODUCT_MODULE_NAME = Latest;
+				PRODUCT_NAME = "Past Due";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Frameworks/CommerceKit $(SRCROOT)/Frameworks/StoreFoundation";
 				SWIFT_OBJC_BRIDGING_HEADER = "Latest/Resources/Latest Bridging_Header.h";
@@ -1514,9 +1533,10 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.12;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.max-langer.Latest";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.halfbuttonpress.PastDue";
+				PRODUCT_MODULE_NAME = Latest;
+				PRODUCT_NAME = "Past Due";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Frameworks/CommerceKit $(SRCROOT)/Frameworks/StoreFoundation";
 				SWIFT_OBJC_BRIDGING_HEADER = "Latest/Resources/Latest Bridging_Header.h";
@@ -1535,17 +1555,18 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				DEVELOPMENT_TEAM = VFABJ5RE5Q;
+				DEVELOPMENT_TEAM = "$(inherited)";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_TeamIdentifier = "$(DEVELOPMENT_TEAM)";
 				INFOPLIST_OUTPUT_FORMAT = binary;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.max-langer.latest.UpdateInstaller";
-				PRODUCT_NAME = LatestUpdateInstaller;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.halfbuttonpress.PastDue.UpdateInstaller";
+				PRODUCT_NAME = PastDueUpdateInstaller;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -1566,16 +1587,17 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				DEVELOPMENT_TEAM = VFABJ5RE5Q;
+				DEVELOPMENT_TEAM = "$(inherited)";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_TeamIdentifier = "$(DEVELOPMENT_TEAM)";
 				INFOPLIST_OUTPUT_FORMAT = binary;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.max-langer.latest.UpdateInstaller";
-				PRODUCT_NAME = LatestUpdateInstaller;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.halfbuttonpress.PastDue.UpdateInstaller";
+				PRODUCT_NAME = PastDueUpdateInstaller;
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -1594,6 +1616,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+					"$(PROJECT_DIR)/Frameworks",
+				);
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = Tests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1601,10 +1628,11 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.max-langer.Latest-Tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.halfbuttonpress.PastDueTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Frameworks/CommerceKit $(SRCROOT)/Frameworks/StoreFoundation";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Latest.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Latest";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Past Due.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Past Due";
 			};
 			name = Debug;
 		};
@@ -1619,6 +1647,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+					"$(PROJECT_DIR)/Frameworks",
+				);
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = Tests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1626,10 +1659,11 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.max-langer.Latest-Tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.halfbuttonpress.PastDueTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Frameworks/CommerceKit $(SRCROOT)/Frameworks/StoreFoundation";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Latest.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Latest";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Past Due.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Past Due";
 			};
 			name = Release;
 		};
@@ -1679,8 +1713,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
-				kind = exactVersion;
-				version = 2.5.1;
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
