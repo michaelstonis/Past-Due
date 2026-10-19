@@ -24,7 +24,10 @@ and Sparkle EdDSA update signing.
 Options:
   --team-id <TEAM_ID>          Apple Developer Team ID (default: auto-detected or A4P3DBPJT3)
   --notary-profile <NAME>      Keychain profile name for xcrun notarytool (default: PastDueNotary)
-  --apple-id <EMAIL>           Apple ID email for notarytool store-credentials
+  --apple-id <EMAIL>           Apple ID email for notarytool store-credentials / GitHub secrets
+  --app-password <PASSWORD>    Apple ID app-specific password for GitHub Actions notarization secret
+  --p12-file <PATH>            Path to exported Developer ID Application .p12 file for GitHub Actions
+  --p12-password <PASSWORD>    Password for the exported .p12 file
   --sync-github-secrets        Push configured signing secrets to GitHub Actions via `gh secret set`
   --non-interactive            Do not prompt for interactive input; configure what is already available
   -h, --help                   Show this help
@@ -33,7 +36,10 @@ USAGE
 
 TEAM_ID=""
 NOTARY_PROFILE="${DEFAULT_NOTARY_PROFILE}"
-APPLE_ID=""
+APPLE_ID="${APPLE_ID:-}"
+APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-}"
+P12_FILE_PATH="${P12_FILE_PATH:-}"
+P12_FILE_PASS="${P12_FILE_PASS:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,6 +53,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --apple-id)
       APPLE_ID="$2"
+      shift 2
+      ;;
+    --app-password)
+      APP_SPECIFIC_PASSWORD="$2"
+      shift 2
+      ;;
+    --p12-file)
+      P12_FILE_PATH="$2"
+      shift 2
+      ;;
+    --p12-password)
+      P12_FILE_PASS="$2"
       shift 2
       ;;
     --sync-github-secrets)
@@ -225,12 +243,56 @@ if [[ "${SYNC_GH_SECRETS}" == "1" ]]; then
   log_header "Step 5: Syncing Secrets to GitHub Actions (michaelstonis/Past-Due)"
   TMP_SPARKLE_DIR="$(mktemp -d)"
   TMP_SPARKLE_KEY="${TMP_SPARKLE_DIR}/sparkle_private_key"
+  TMP_P12_FILE="${TMP_SPARKLE_DIR}/certificate.p12"
   trap 'rm -rf "${TMP_SPARKLE_DIR}"' EXIT
+
   "${GENERATE_KEYS}" --account "${SPARKLE_ACCOUNT}" -x "${TMP_SPARKLE_KEY}"
   gh secret set SPARKLE_PRIVATE_KEY --repo michaelstonis/Past-Due < "${TMP_SPARKLE_KEY}"
   gh secret set APPLE_TEAM_ID --repo michaelstonis/Past-Due --body "${TEAM_ID}"
   gh secret set CODESIGN_IDENTITY --repo michaelstonis/Past-Due --body "${SELECTED_IDENTITY}"
-  echo "Synced SPARKLE_PRIVATE_KEY, APPLE_TEAM_ID, and CODESIGN_IDENTITY to michaelstonis/Past-Due."
+
+  # Export or read Developer ID Application certificate + private key (.p12) for CI runners
+  if [[ -z "${P12_FILE_PATH}" && "${NON_INTERACTIVE}" == "0" ]]; then
+    cat <<'EOF'
+
+To allow GitHub Actions runners to sign with your Developer ID Application certificate:
+  1. In Xcode -> Settings (⌘,) -> Accounts -> Manage Certificates...
+  2. Right-click "Developer ID Application" -> "Export Certificate..." and save a .p12 file
+EOF
+    read -r -p "Enter path to exported .p12 file (or press Enter to skip): " P12_FILE_PATH
+  fi
+
+  if [[ -n "${P12_FILE_PATH}" ]]; then
+    # Expand leading tilde if entered interactively
+    P12_FILE_PATH="${P12_FILE_PATH/#\~/$HOME}"
+    if [[ -f "${P12_FILE_PATH}" ]]; then
+      if [[ -z "${P12_FILE_PASS}" && "${NON_INTERACTIVE}" == "0" ]]; then
+        read -r -s -p "Enter password used when exporting the .p12 file: " P12_FILE_PASS
+        echo ""
+      fi
+      base64 < "${P12_FILE_PATH}" | tr -d '\n' | gh secret set APPLE_CERTIFICATE_P12_BASE64 --repo michaelstonis/Past-Due
+      gh secret set APPLE_CERTIFICATE_PASSWORD --repo michaelstonis/Past-Due --body "${P12_FILE_PASS}"
+      echo "Synced APPLE_CERTIFICATE_P12_BASE64 and APPLE_CERTIFICATE_PASSWORD."
+    else
+      echo "Warning: .p12 file not found at ${P12_FILE_PATH}" >&2
+    fi
+  fi
+
+  if [[ -z "${APPLE_ID}" && "${NON_INTERACTIVE}" == "0" ]]; then
+    read -r -p "Enter your Apple ID email for GitHub Actions notarization (or press Enter to skip): " APPLE_ID
+  fi
+  if [[ -n "${APPLE_ID}" ]]; then
+    gh secret set APPLE_ID --repo michaelstonis/Past-Due --body "${APPLE_ID}"
+    if [[ -z "${APP_SPECIFIC_PASSWORD}" && "${NON_INTERACTIVE}" == "0" ]]; then
+      read -r -s -p "Enter your Apple ID App-Specific Password for GitHub Actions notarization: " APP_SPECIFIC_PASSWORD
+      echo ""
+    fi
+    if [[ -n "${APP_SPECIFIC_PASSWORD}" ]]; then
+      gh secret set APPLE_APP_SPECIFIC_PASSWORD --repo michaelstonis/Past-Due --body "${APP_SPECIFIC_PASSWORD}"
+    fi
+  fi
+
+  echo "Finished syncing secrets to michaelstonis/Past-Due."
 fi
 
 log_header "Setup Summary"

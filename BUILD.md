@@ -1,60 +1,58 @@
 # Build, Signing, Notarization & Release Guide
 
-This repository includes two scripts for semi-automated signing setup and local/CI packaging of **Past Due**:
+This repository includes two scripts and two GitHub Actions workflows for automated versioning, signing, notarization, and releases of **Past Due**:
 
-- `scripts/setup_signing.sh` — Semi-automated wizard that detects your Apple Developer certificates & Team ID, generates/verifies your Sparkle 2 EdDSA keypair in the macOS Keychain, updates `SUPublicEDKey` in `Latest/Resources/Info.plist`, configures `xcrun notarytool` credentials, and writes a local gitignored `.signing.env` file.
-- `scripts/build_dmg.sh` — Automatically manages semantic version and monotonic build numbers across `Latest.xcodeproj/project.pbxproj`, `Latest/Resources/Info.plist`, `CHANGELOG.md`, and `appcast.xml`; builds a universal (`arm64` + `x86_64`) `Past Due.app`; signs nested frameworks (`Sparkle.framework`) and the privileged helper (`PastDueUpdateInstaller`) inside-out; notarizes and staples the app and DMG; signs the DMG with Sparkle EdDSA; and optionally commits, tags, and publishes the GitHub Release (`--publish`).
+- `.github/workflows/release.yml` — **Automated Build Server on `main`**: Every push to `main` automatically runs unit tests, manages semantic version & monotonic build numbers, signs & notarizes the universal app and DMG, signs the DMG with Sparkle EdDSA, commits the updated version/`appcast.xml` back to `main` (`[skip ci]`), tags `v<version>`, and publishes the GitHub Release.
+- `.github/workflows/ci.yml` — Runs unit tests on pull requests and `develop` pushes.
+- `scripts/setup_signing.sh` — Semi-automated wizard that detects your Apple Developer certificates & Team ID, generates/verifies your Sparkle 2 EdDSA keypair in the macOS Keychain, updates `SUPublicEDKey` in `Latest/Resources/Info.plist`, configures `xcrun notarytool` credentials, writes a local gitignored `.signing.env` file, and syncs all signing/notarization secrets to GitHub Actions (`--sync-github-secrets`).
+- `scripts/build_dmg.sh` — Local/CI packaging script used by both local builds and GitHub Actions.
 
 ---
 
-## 1. Semi-Automated Signing & Notarization Setup (`scripts/setup_signing.sh`)
+## 1. Automated Releases on Push to `main` (`.github/workflows/release.yml`)
 
-Run the interactive setup script once on your Mac:
+Whenever a commit is pushed or merged to `main` (unless the commit message contains `[skip ci]`):
+
+1. **Unit Tests**: Runs `xcodebuild test` across all 42 unit tests.
+2. **Automatic Version & Build Number Management**:
+   - **Initial Version**: If the current `MARKETING_VERSION` in `Latest.xcodeproj/project.pbxproj` (e.g. `1.0.0`) does not have a `v1.0.0` git tag yet, it releases `v1.0.0`.
+   - **Subsequent Commits to `main`**: Once `v1.0.0` exists, pushing to `main` automatically bumps the version:
+     - **Default**: Bumps **patch** (`1.0.0` → `1.0.1`)
+     - **`feat: ...` or `[bump minor]` in commit message**: Bumps **minor** (`1.0.0` → `1.1.0`)
+     - **`BREAKING CHANGE` or `[bump major]` in commit message**: Bumps **major** (`1.0.0` → `2.0.0`)
+     - **Manual trigger (`workflow_dispatch`)**: Lets you pick `patch`, `minor`, or `major` from the GitHub Actions UI.
+   - **Monotonic Build Number (`CFBundleVersion`)**: Automatically computes `max(git commit count, Info.plist CFBundleVersion, appcast.xml sparkle:version)` (or `+1` when bumping) and updates `Latest/Resources/Info.plist`, the built `.app`, `.dSYM`, and `appcast.xml`.
+3. **Ephemeral Keychain Signing & Notarization**:
+   - Imports `APPLE_CERTIFICATE_P12_BASE64` (`Developer ID Application`) into a temporary keychain on the GitHub Actions runner.
+   - Configures `notarytool` (`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`) and notarizes + staples both `Past Due.app` and `Past-Due-<version>.dmg`.
+   - Imports `SPARKLE_PRIVATE_KEY`, signs the DMG with EdDSA (`sign_update`), and updates `appcast.xml`.
+4. **Commit Back, Tag & GitHub Release**:
+   - Commits the updated `Latest.xcodeproj/project.pbxproj`, `Latest/Resources/Info.plist`, `CHANGELOG.md`, and `appcast.xml` back to `main` with `chore(release): Past Due vX.Y.Z (Build N) [skip ci]`.
+   - Tags `vX.Y.Z` and publishes the GitHub Release with `Past-Due-X.Y.Z.dmg`, `Past-Due-X.Y.Z.dmg.sha256`, and `Past-Due-X.Y.Z.build-manifest.json`.
+
+---
+
+## 2. Syncing Signing & Notarization Secrets to GitHub Actions
+
+To enable full Developer ID signing and Apple Notarization on the GitHub Actions build server, run:
 
 ```bash
-./scripts/setup_signing.sh
+./scripts/setup_signing.sh --sync-github-secrets
 ```
 
-What `scripts/setup_signing.sh` does:
-1. **Checks your macOS Keychain** for a `Developer ID Application` certificate and auto-detects your Team ID (`A4P3DBPJT3`).
-2. **Verifies or generates your Sparkle 2 EdDSA keypair** in your login Keychain (`generate_keys`) and automatically writes `SUPublicEDKey` into `Latest/Resources/Info.plist`.
-3. **Configures Apple Notarization (`xcrun notarytool`)** under the keychain profile `PastDueNotary` using your Apple ID and an app-specific password from [account.apple.com](https://account.apple.com).
-4. **Writes `.signing.env`** (ignored by git) so `scripts/build_dmg.sh` automatically uses your Team ID, signing identity, notary profile, Sparkle EdDSA key, and automatic version management (`AUTO_VERSION="1"`) on every build.
-5. **Optional GitHub Actions sync**: Pass `--sync-github-secrets` to push `SPARKLE_PRIVATE_KEY`, `APPLE_TEAM_ID`, and `CODESIGN_IDENTITY` to `michaelstonis/Past-Due` via `gh secret set`.
+This syncs the following repository secrets to `michaelstonis/Past-Due`:
+- `SPARKLE_PRIVATE_KEY` — Sparkle 2 EdDSA private key exported from your Keychain
+- `APPLE_TEAM_ID` — `A4P3DBPJT3`
+- `CODESIGN_IDENTITY` — `Developer ID Application: Michael Stonis (A4P3DBPJT3)`
+- `APPLE_CERTIFICATE_P12_BASE64` & `APPLE_CERTIFICATE_PASSWORD` — Ephemeral `.p12` export of your `Developer ID Application` certificate and private key (macOS Keychain will prompt for your Mac login password to allow exporting the key)
+- `APPLE_ID` & `APPLE_APP_SPECIFIC_PASSWORD` — Apple ID email and app-specific password for `xcrun notarytool` on the CI runner
 
 ---
 
-## 2. Automatic Version Management (`scripts/build_dmg.sh`)
-
-By default (`AUTO_VERSION=1`), `scripts/build_dmg.sh` manages both `MARKETING_VERSION` (`CFBundleShortVersionString`) and `CFBundleVersion` automatically:
-
-- **Automatic Post-Tag Patch Bump**: If the current `MARKETING_VERSION` in `Latest.xcodeproj/project.pbxproj` (e.g. `1.0.0`) already has a matching git tag (`v1.0.0`) and new commits have been made since `v1.0.0`, running `./scripts/build_dmg.sh` automatically increments the patch version (`1.0.0` → `1.0.1`).
-- **Explicit Semantic Version Bumping**:
-  - `./scripts/build_dmg.sh --bump patch` (`1.0.0` → `1.0.1`)
-  - `./scripts/build_dmg.sh --bump minor` (`1.0.0` → `1.1.0`)
-  - `./scripts/build_dmg.sh --bump major` (`1.0.0` → `2.0.0`)
-  - `./scripts/build_dmg.sh --version 1.2.3` (set explicit version)
-- **Monotonic Build Number (`CFBundleVersion`)**: Automatically computes `max(git commit count, Info.plist CFBundleVersion, appcast.xml sparkle:version)` (and increments by `+1` whenever bumping versions on the same commit) and syncs it across `Latest/Resources/Info.plist`, the built `.app`, `.dSYM`, and `appcast.xml`.
-- **Single-Command Release (`--publish`)**:
-  ```bash
-  ./scripts/build_dmg.sh --publish
-  ```
-  Builds, signs, notarizes, staples, updates `appcast.xml`, commits the version & appcast changes, creates and pushes git tag `v<version>`, and publishes the GitHub Release with `dist/Past-Due-<version>.dmg` and `dist/Past-Due-<version>.dmg.sha256`.
-
----
-
-## 3. Useful Options
+## 3. Local Builds & Manual Version Bumping (`scripts/build_dmg.sh`)
 
 ```bash
-./scripts/build_dmg.sh --help
+./scripts/build_dmg.sh                        # Auto-manages version/build, signs, notarizes, updates appcast.xml
+./scripts/build_dmg.sh --bump minor           # Bumps 1.0.0 -> 1.1.0, increments build number, builds & signs DMG
+./scripts/build_dmg.sh --publish              # Builds, notarizes, commits appcast/version, tags & publishes GitHub Release locally
 ```
-
-- `--bump <major|minor|patch>` — Bump semantic version across project, changelog, and appcast
-- `--publish` — Commit version/appcast changes, tag `v<version>`, push to `origin/main`, and publish GitHub Release
-- `--no-auto-version` — Disable automatic version bumping/syncing to source files
-- `--app-only` — Build/sign/notarize only `dist/Past Due.app`
-- `--skip-notarization` — Skip Apple notarization even if `NOTARY_PROFILE` is configured
-- `--update-appcast` / `--no-update-appcast` — Enable or skip Sparkle EdDSA signing and `appcast.xml` update
-- `--version <x.y.z>` / `--build <num>` — Explicitly set `CFBundleShortVersionString` / `CFBundleVersion`
-- `--allow-debugging` — Add `com.apple.security.get-task-allow=true` when signing for local debugging
-- `--open` — Reveal/open the resulting app or DMG when finished

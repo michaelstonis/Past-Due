@@ -1,28 +1,178 @@
-name: Release
+name: Build, Version & Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      bump_mode:
+        description: 'Version bump mode (leave empty for automatic detection)'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 jobs:
   release:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: macos-15
     steps:
-      - name: Checkout repository
+      - name: Checkout repository with full history and tags
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build DMG package
+      - name: Run Unit Tests
         run: |
-          chmod +x scripts/build_dmg.sh
-          APP_SIGN_IDENTITY="-" ./scripts/build_dmg.sh
+          xcodebuild test \
+            -project Latest.xcodeproj \
+            -scheme Latest \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Upload Release Assets
+      - name: Set up Signing Keychain, Notarization & Sparkle Key
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          KEYCHAIN_PATH="${RUNNER_TEMP}/build.keychain-db"
+          KEYCHAIN_PASS="$(openssl rand -base64 24)"
+
+          security create-keychain -p "${KEYCHAIN_PASS}" "${KEYCHAIN_PATH}"
+          security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
+          security unlock-keychain -p "${KEYCHAIN_PASS}" "${KEYCHAIN_PATH}"
+          security list-keychains -d user -s "${KEYCHAIN_PATH}" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "${KEYCHAIN_PATH}"
+
+          APP_SIGN_IDENTITY="-"
+          NOTARY_PROFILE=""
+          SKIP_NOTARIZATION="1"
+          UPDATE_APPCAST="0"
+
+          if [[ -n "${APPLE_CERTIFICATE_P12_BASE64}" && -n "${APPLE_CERTIFICATE_PASSWORD}" ]]; then
+            echo "Importing Developer ID certificate into ephemeral keychain..."
+            CERT_PATH="${RUNNER_TEMP}/certificate.p12"
+            printf '%s' "${APPLE_CERTIFICATE_P12_BASE64}" | base64 --decode > "${CERT_PATH}"
+            security import "${CERT_PATH}" \
+              -k "${KEYCHAIN_PATH}" \
+              -P "${APPLE_CERTIFICATE_PASSWORD}" \
+              -T /usr/bin/codesign \
+              -T /usr/bin/security \
+              -T /usr/bin/productbuild
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASS}" "${KEYCHAIN_PATH}"
+            rm -f "${CERT_PATH}"
+
+            if [[ -n "${CODESIGN_IDENTITY}" ]]; then
+              APP_SIGN_IDENTITY="${CODESIGN_IDENTITY}"
+            else
+              APP_SIGN_IDENTITY="$(security find-identity -v -p codesigning "${KEYCHAIN_PATH}" | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -n 1)"
+            fi
+          fi
+
+          if [[ -n "${APPLE_ID}" && -n "${APPLE_APP_SPECIFIC_PASSWORD}" && -n "${APPLE_TEAM_ID}" && "${APP_SIGN_IDENTITY}" == Developer\ ID\ Application:* ]]; then
+            echo "Configuring notarytool keychain profile..."
+            NOTARY_PROFILE="PastDueNotary"
+            xcrun notarytool store-credentials "${NOTARY_PROFILE}" \
+              --apple-id "${APPLE_ID}" \
+              --team-id "${APPLE_TEAM_ID}" \
+              --password "${APPLE_APP_SPECIFIC_PASSWORD}" \
+              --keychain "${KEYCHAIN_PATH}"
+            SKIP_NOTARIZATION="0"
+          fi
+
+          if [[ -n "${SPARKLE_PRIVATE_KEY}" ]]; then
+            echo "Importing Sparkle EdDSA private key into ephemeral keychain..."
+            SPARKLE_VERSION="2.10.0"
+            SPARKLE_DIR=".build/sparkle-tools/${SPARKLE_VERSION}"
+            mkdir -p "${SPARKLE_DIR}"
+            curl -fsSL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o "${SPARKLE_DIR}/Sparkle.tar.xz"
+            tar -xf "${SPARKLE_DIR}/Sparkle.tar.xz" -C "${SPARKLE_DIR}"
+            SPARKLE_KEY_FILE="${RUNNER_TEMP}/sparkle_ed25519.key"
+            printf '%s' "${SPARKLE_PRIVATE_KEY}" > "${SPARKLE_KEY_FILE}"
+            "${SPARKLE_DIR}/bin/generate_keys" --account ed25519 -f "${SPARKLE_KEY_FILE}"
+            rm -f "${SPARKLE_KEY_FILE}"
+            UPDATE_APPCAST="1"
+          fi
+
+          {
+            echo "APP_SIGN_IDENTITY=${APP_SIGN_IDENTITY}"
+            echo "DEVELOPMENT_TEAM=${APPLE_TEAM_ID:-A4P3DBPJT3}"
+            echo "NOTARY_PROFILE=${NOTARY_PROFILE}"
+            echo "SKIP_NOTARIZATION=${SKIP_NOTARIZATION}"
+            echo "UPDATE_APPCAST=${UPDATE_APPCAST}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Determine Version Bump Mode & Build Release DMG
+        id: build
+        env:
+          INPUT_BUMP_MODE: ${{ inputs.bump_mode }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+
+          BUMP_ARGS=()
+          if [[ -n "${INPUT_BUMP_MODE}" ]]; then
+            BUMP_ARGS=(--bump "${INPUT_BUMP_MODE}")
+          elif [[ "${COMMIT_MSG}" == *"[bump major]"* || "${COMMIT_MSG}" == *"BREAKING CHANGE"* ]]; then
+            BUMP_ARGS=(--bump major)
+          elif [[ "${COMMIT_MSG}" == *"[bump minor]"* || "${COMMIT_MSG}" =~ ^feat(\(.*\))?: ]]; then
+            BUMP_ARGS=(--bump minor)
+          fi
+
+          chmod +x scripts/build_dmg.sh
+          AUTO_VERSION=1 ./scripts/build_dmg.sh "${BUMP_ARGS[@]}"
+
+          APP_VERSION="$(plutil -extract CFBundleShortVersionString raw -o - "dist/Past Due.app/Contents/Info.plist")"
+          APP_BUILD="$(plutil -extract CFBundleVersion raw -o - "dist/Past Due.app/Contents/Info.plist")"
+          echo "app_version=${APP_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "app_build=${APP_BUILD}" >> "${GITHUB_OUTPUT}"
+
+      - name: Commit Version & Appcast Updates and Push Tag
+        env:
+          APP_VERSION: ${{ steps.build.outputs.app_version }}
+          APP_BUILD: ${{ steps.build.outputs.app_build }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add Latest.xcodeproj/project.pbxproj Latest/Resources/Info.plist CHANGELOG.md appcast.xml
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): Past Due v${APP_VERSION} (Build ${APP_BUILD}) [skip ci]"
+            git push origin HEAD:main
+          fi
+
+          git tag -f -a "v${APP_VERSION}" -m "Past Due ${APP_VERSION} (Build ${APP_BUILD})"
+          git push -f origin "v${APP_VERSION}"
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.build.outputs.app_version }}
+          name: Past Due ${{ steps.build.outputs.app_version }}
           files: |
             dist/*.dmg
             dist/*.sha256
