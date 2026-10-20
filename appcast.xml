@@ -18,7 +18,7 @@
                     <li>Fixes for launch crashes, NSTableView row reuse crashes, DisplayLink sleep/wake crashes, and recursive FSEvents folder monitoring</li>
                 </ul>
             ]]></description>
-            <enclosure url="https://github.com/michaelstonis/Past-Due/releases/download/v1.0.0/Past-Due-1.0.0.dmg" length="5442919" type="application/octet-stream"/>
+            <enclosure url="https://github.com/michaelstonis/Past-Due/releases/download/v1.0.0/Past-Due-1.0.0.dmg" sparkle:edSignature="JTOb0+PPoBjyL7fBkbDw3gJ7mVwIMLEb8/ym+d/KrO8svXkTbHYd8nXulQh2kO+0Trz4uhzMwqQhIJexwYuACA==" length="5442919" type="application/octet-stream"/>
         </item>
     </channel>
 </rss>

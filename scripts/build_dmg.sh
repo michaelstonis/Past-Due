@@ -672,13 +672,16 @@ appcast_path, short_ver, build_ver, pub_date, url, ed_sig, length = sys.argv[1:]
 with open(appcast_path, "r", encoding="utf-8") as f:
     content = f.read()
 
-content = re.sub(r"<title>Version [^<]*</title>", f"<title>Version {short_ver}</title>", content, count=1)
+content = re.sub(r"<title>(?:Version )?[0-9][^<]*</title>", f"<title>Version {short_ver}</title>", content, count=1)
 content = re.sub(r"<pubDate>[^<]*</pubDate>", f"<pubDate>{pub_date}</pubDate>", content, count=1)
 content = re.sub(r"<sparkle:version>[^<]*</sparkle:version>", f"<sparkle:version>{build_ver}</sparkle:version>", content, count=1)
 content = re.sub(r"<sparkle:shortVersionString>[^<]*</sparkle:shortVersionString>", f"<sparkle:shortVersionString>{short_ver}</sparkle:shortVersionString>", content, count=1)
-content = re.sub(r'url="[^"]*Past-Due-[^"]*\.dmg"', f'url="{url}"', content, count=1)
-content = re.sub(r'sparkle:edSignature="[^"]*"', f'sparkle:edSignature="{ed_sig}"', content, count=1)
-content = re.sub(r'length="[^"]*"', f'length="{length}"', content, count=1)
+content = re.sub(
+    r"<enclosure[^>]*/>",
+    f'<enclosure url="{url}" sparkle:edSignature="{ed_sig}" length="{length}" type="application/octet-stream"/>',
+    content,
+    count=1,
+)
 
 with open(appcast_path, "w", encoding="utf-8") as f:
     f.write(content)
