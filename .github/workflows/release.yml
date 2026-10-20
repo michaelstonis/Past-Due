@@ -111,6 +111,7 @@ jobs:
             echo "APP_SIGN_IDENTITY=${APP_SIGN_IDENTITY}"
             echo "DEVELOPMENT_TEAM=${APPLE_TEAM_ID:-A4P3DBPJT3}"
             echo "NOTARY_PROFILE=${NOTARY_PROFILE}"
+            echo "NOTARY_KEYCHAIN=${KEYCHAIN_PATH}"
             echo "SKIP_NOTARIZATION=${SKIP_NOTARIZATION}"
             echo "UPDATE_APPCAST=${UPDATE_APPCAST}"
           } >> "${GITHUB_ENV}"
@@ -124,17 +125,17 @@ jobs:
         run: |
           set -euo pipefail
 
-          BUMP_ARGS=()
+          BUMP_MODE=""
           if [[ -n "${INPUT_BUMP_MODE}" ]]; then
-            BUMP_ARGS=(--bump "${INPUT_BUMP_MODE}")
+            BUMP_MODE="${INPUT_BUMP_MODE}"
           elif [[ "${COMMIT_MSG}" == *"[bump major]"* || "${COMMIT_MSG}" == *"BREAKING CHANGE"* ]]; then
-            BUMP_ARGS=(--bump major)
+            BUMP_MODE="major"
           elif [[ "${COMMIT_MSG}" == *"[bump minor]"* || "${COMMIT_MSG}" =~ ^feat(\(.*\))?: ]]; then
-            BUMP_ARGS=(--bump minor)
+            BUMP_MODE="minor"
           fi
 
           chmod +x scripts/build_dmg.sh
-          AUTO_VERSION=1 ./scripts/build_dmg.sh "${BUMP_ARGS[@]}"
+          AUTO_VERSION=1 BUMP_MODE="${BUMP_MODE}" ./scripts/build_dmg.sh
 
           APP_VERSION="$(plutil -extract CFBundleShortVersionString raw -o - "dist/Past Due.app/Contents/Info.plist")"
           APP_BUILD="$(plutil -extract CFBundleVersion raw -o - "dist/Past Due.app/Contents/Info.plist")"

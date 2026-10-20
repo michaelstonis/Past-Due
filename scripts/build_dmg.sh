@@ -569,12 +569,16 @@ if [[ -n "${APP_SIGN_IDENTITY}" ]]; then
 fi
 
 if [[ -n "${NOTARY_PROFILE}" && "${SKIP_NOTARIZATION}" != "1" ]]; then
+  NOTARY_ARGS=(--keychain-profile "${NOTARY_PROFILE}" --wait)
+  if [[ -n "${NOTARY_KEYCHAIN:-}" ]]; then
+    NOTARY_ARGS+=(--keychain "${NOTARY_KEYCHAIN}")
+  fi
   APP_ZIP="${WORK_DIR}/${ARTIFACT_SLUG}.zip"
   log "Creating zip for app notarization"
   ditto -c -k --keepParent "${APP_DIR}" "${APP_ZIP}"
 
   log "Submitting app for notarization"
-  xcrun notarytool submit "${APP_ZIP}" --keychain-profile "${NOTARY_PROFILE}" --wait
+  xcrun notarytool submit "${APP_ZIP}" "${NOTARY_ARGS[@]}"
 
   log "Stapling notarization ticket to app"
   xcrun stapler staple "${APP_DIR}"
@@ -630,8 +634,12 @@ if [[ -n "${APP_SIGN_IDENTITY}" && "${APP_SIGN_IDENTITY}" != "-" ]]; then
 fi
 
 if [[ -n "${NOTARY_PROFILE}" && "${SKIP_NOTARIZATION}" != "1" ]]; then
+  NOTARY_ARGS=(--keychain-profile "${NOTARY_PROFILE}" --wait)
+  if [[ -n "${NOTARY_KEYCHAIN:-}" ]]; then
+    NOTARY_ARGS+=(--keychain "${NOTARY_KEYCHAIN}")
+  fi
   log "Submitting DMG for notarization"
-  xcrun notarytool submit "${UNSIGNED_DMG}" --keychain-profile "${NOTARY_PROFILE}" --wait
+  xcrun notarytool submit "${UNSIGNED_DMG}" "${NOTARY_ARGS[@]}"
 
   log "Stapling notarization ticket to DMG"
   xcrun stapler staple "${UNSIGNED_DMG}"
