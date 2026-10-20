@@ -646,7 +646,11 @@ printf '%s  %s\n' "${DMG_SHA256}" "$(basename "${FINAL_DMG}")" > "${DMG_SHA_FILE
 if [[ "${UPDATE_APPCAST}" == "1" && -f "${APPCAST_FILE}" ]]; then
   log "Signing DMG with Sparkle EdDSA key and updating appcast.xml"
   ensure_sparkle_sign_update
-  SIGN_OUTPUT="$("${SIGN_UPDATE_BIN}" --account "${SPARKLE_ACCOUNT}" "${FINAL_DMG}" 2>/dev/null || true)"
+  if [[ -n "${SPARKLE_PRIVATE_KEY:-}" ]]; then
+    SIGN_OUTPUT="$(printf '%s\n' "${SPARKLE_PRIVATE_KEY}" | "${SIGN_UPDATE_BIN}" --ed-key-file - "${FINAL_DMG}" 2>/dev/null || true)"
+  else
+    SIGN_OUTPUT="$("${SIGN_UPDATE_BIN}" --account "${SPARKLE_ACCOUNT}" "${FINAL_DMG}" 2>/dev/null || true)"
+  fi
   if [[ -n "${SIGN_OUTPUT}" ]]; then
     SPARKLE_ED_SIG="$(printf '%s' "${SIGN_OUTPUT}" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
     DMG_LENGTH="$(stat -f%z "${FINAL_DMG}")"

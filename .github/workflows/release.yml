@@ -35,6 +35,15 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Select Xcode 26
+        run: |
+          XCODE_26="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [[ -n "${XCODE_26}" ]]; then
+            echo "Selecting ${XCODE_26}..."
+            sudo xcode-select -s "${XCODE_26}/Contents/Developer"
+          fi
+          xcodebuild -version
+
       - name: Run Unit Tests
         run: |
           xcodebuild test \
@@ -103,16 +112,7 @@ jobs:
           fi
 
           if [[ -n "${SPARKLE_PRIVATE_KEY}" ]]; then
-            echo "Importing Sparkle EdDSA private key into ephemeral keychain..."
-            SPARKLE_VERSION="2.10.0"
-            SPARKLE_DIR=".build/sparkle-tools/${SPARKLE_VERSION}"
-            mkdir -p "${SPARKLE_DIR}"
-            curl -fsSL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o "${SPARKLE_DIR}/Sparkle.tar.xz"
-            tar -xf "${SPARKLE_DIR}/Sparkle.tar.xz" -C "${SPARKLE_DIR}"
-            SPARKLE_KEY_FILE="${RUNNER_TEMP}/sparkle_ed25519.key"
-            printf '%s' "${SPARKLE_PRIVATE_KEY}" > "${SPARKLE_KEY_FILE}"
-            "${SPARKLE_DIR}/bin/generate_keys" --account ed25519 -f "${SPARKLE_KEY_FILE}"
-            rm -f "${SPARKLE_KEY_FILE}"
+            echo "Sparkle EdDSA private key configured for appcast signing."
             UPDATE_APPCAST="1"
           fi
 
@@ -129,6 +129,7 @@ jobs:
         env:
           INPUT_BUMP_MODE: ${{ inputs.bump_mode }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
 
