@@ -95,6 +95,7 @@
 		50FEB8872B1D2402006FB75D /* HomebrewUpdateOperationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8862B1D2402006FB75D /* HomebrewUpdateOperationTest.swift */; };
 		50FEB8892B1D2402006FB75D /* AppDataStoreLifecycleTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */; };
 		50FEB88B2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */; };
+		50FEB88D2B1D2402006FB75D /* SparkleArchitectureTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB88C2B1D2402006FB75D /* SparkleArchitectureTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -396,6 +397,7 @@
 		50FEB8862B1D2402006FB75D /* HomebrewUpdateOperationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomebrewUpdateOperationTest.swift; sourceTree = "<group>"; };
 		50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataStoreLifecycleTest.swift; sourceTree = "<group>"; };
 		50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreCheckerOperationTest.swift; sourceTree = "<group>"; };
+		50FEB88C2B1D2402006FB75D /* SparkleArchitectureTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleArchitectureTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -761,6 +763,7 @@
 				50FEB8862B1D2402006FB75D /* HomebrewUpdateOperationTest.swift */,
 				50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */,
 				50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */,
+				50FEB88C2B1D2402006FB75D /* SparkleArchitectureTest.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -1162,6 +1165,7 @@
 				50FEB8872B1D2402006FB75D /* HomebrewUpdateOperationTest.swift in Sources */,
 				50FEB8892B1D2402006FB75D /* AppDataStoreLifecycleTest.swift in Sources */,
 				50FEB88B2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift in Sources */,
+				50FEB88D2B1D2402006FB75D /* SparkleArchitectureTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

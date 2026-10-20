@@ -113,7 +113,16 @@ extension SparkleUpdateOperation: SPUUserDriver {
 	}
 	
 	func showUpdateFound(with appcastItem: SUAppcastItem, state: SPUUserUpdateState, reply: @escaping (SPUUserUpdateChoice) -> Void) {
-		reply(self.isCancelled ? .dismiss : .install)
+		guard !self.isCancelled,
+			  let bundle = Bundle(path: self.bundleURL.path),
+			  Sparke.isAppcastItemCompatible(appcastItem, for: bundle) else {
+			reply(.dismiss)
+			if !self.isCancelled {
+				self.finish(with: LatestError.updateInfoUnavailable)
+			}
+			return
+		}
+		reply(.install)
 	}
 		
 	func showUpdateNotFoundWithError(_ error: Error, acknowledgement: @escaping () -> Void) {
@@ -226,6 +235,16 @@ extension SparkleUpdateOperation: SPUUpdaterDelegate {
 		// We can try to supply a valid feed as addition to Sparkle's own methods.
 		// For some cases (like DevMate) Sparkle fails to retrieve an appcast by itself.
 		return Sparke.feedURL(from: updater.hostBundle)?.absoluteString
+	}
+	
+	func bestValidUpdate(in appcast: SUAppcast, for updater: SPUUpdater) -> SUAppcastItem? {
+		return Sparke.bestValidUpdate(in: appcast, for: updater.hostBundle)
+	}
+	
+	func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
+		guard Sparke.isAppcastItemCompatible(updateItem, for: updater.hostBundle) else {
+			throw LatestError.updateInfoUnavailable
+		}
 	}
 	
 }

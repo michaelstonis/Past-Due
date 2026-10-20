@@ -84,6 +84,13 @@ class SparkleUpdateCheckerOperation: StatefulOperation, UpdateCheckerOperation, 
 	}
 	
 	fileprivate func finish(with appcastItem: SUAppcastItem) {
+		guard !Sparke.isEmptyItem(appcastItem),
+			  let bundle = Bundle(path: self.app.fileURL.path),
+			  Sparke.isAppcastItemCompatible(appcastItem, for: bundle) else {
+			self.finish(with: LatestError.updateInfoUnavailable)
+			return
+		}
+		
 		let version = Version(versionNumber: appcastItem.displayVersionString, buildNumber: appcastItem.versionString)
 		
 		// OS Version
@@ -126,7 +133,11 @@ extension SparkleUpdateCheckerOperation: SPUUserDriver {
 		
 	func showUpdateNotFoundWithError(_ error: Error, acknowledgement: @escaping () -> Void) {
 		let nsError = error as NSError
-		if nsError.domain == SUSparkleErrorDomain && nsError.code == SUError.noUpdateError.rawValue, let appcastItem = nsError.userInfo[SPULatestAppcastItemFoundKey] as? SUAppcastItem {
+		if nsError.domain == SUSparkleErrorDomain && nsError.code == SUError.noUpdateError.rawValue,
+		   let appcastItem = nsError.userInfo[SPULatestAppcastItemFoundKey] as? SUAppcastItem,
+		   !Sparke.isEmptyItem(appcastItem),
+		   let bundle = Bundle(path: self.app.fileURL.path),
+		   Sparke.isAppcastItemCompatible(appcastItem, for: bundle) {
 			self.finish(with: appcastItem)
 		}
 		
@@ -174,6 +185,16 @@ extension SparkleUpdateCheckerOperation: SPUUpdaterDelegate {
 		// We can try to supply a valid feed as addition to Sparkle's own methods.
 		// For some cases (like DevMate) Sparkle fails to retrieve an appcast by itself.
 		return url?.absoluteString
+	}
+	
+	func bestValidUpdate(in appcast: SUAppcast, for updater: SPUUpdater) -> SUAppcastItem? {
+		return Sparke.bestValidUpdate(in: appcast, for: updater.hostBundle)
+	}
+	
+	func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
+		guard Sparke.isAppcastItemCompatible(updateItem, for: updater.hostBundle) else {
+			throw LatestError.updateInfoUnavailable
+		}
 	}
 	
 }
