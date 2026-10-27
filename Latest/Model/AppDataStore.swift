@@ -11,6 +11,9 @@ import Foundation
 /// An interface for objects providing apps.
 protocol AppProviding {
 	
+	/// Returns all apps currently in the data store.
+	var allApps: [App] { get }
+
 	/// Returns a list of apps with available updates that can be updated from within Latest.
 	var updatableApps: [App] { get }
 
@@ -87,6 +90,13 @@ class AppDataStore: AppProviding {
 		}
 	}
 	
+	/// Returns all apps currently in the data store.
+	var allApps: [App] {
+		updateQueue.sync {
+			return Array(self.apps)
+		}
+	}
+
 	/// A subset of apps that can be updated. Ignored apps are not part of this list.
 	var updatableApps: [App] {
 		updateQueue.sync {

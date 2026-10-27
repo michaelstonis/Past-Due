@@ -15,6 +15,7 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 	private var intervalPopUpButton: NSPopUpButton?
 	private var notificationsCheckbox: NSButton?
 	private var launchAtLoginCheckbox: NSButton?
+	private var installCLIButton: NSButton?
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -106,6 +107,25 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		self.launchAtLoginCheckbox = loginButton
 		gridView.addRow(with: [NSGridCell.emptyContentView, loginButton])
 		
+		let cliSeparator = NSBox()
+		cliSeparator.boxType = .separator
+		let cliSeparatorRow = gridView.addRow(with: [NSGridCell.emptyContentView, cliSeparator])
+		cliSeparatorRow.topPadding = 10
+		cliSeparatorRow.bottomPadding = 6
+		cliSeparatorRow.mergeCells(in: NSRange(location: 0, length: 2))
+		
+		let cliLabel = NSTextField(labelWithString: NSLocalizedString("CommandLineSectionLabel", value: "Command Line:", comment: "Label in General settings for installing the past-due CLI command."))
+		cliLabel.alignment = .right
+		
+		let cliButton = NSButton(
+			title: NSLocalizedString("InstallCLITitle", value: "Install 'past-due' Command…", comment: "Button title to install /usr/local/bin/past-due symlink."),
+			target: self,
+			action: #selector(installCLICommand(_:))
+		)
+		cliButton.bezelStyle = .rounded
+		self.installCLIButton = cliButton
+		gridView.addRow(with: [cliLabel, cliButton])
+		
 		refreshBackgroundUpdateControls()
 		
 		view.layoutSubtreeIfNeeded()
@@ -122,6 +142,14 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		notificationsCheckbox?.state = settings.notificationsEnabled ? .on : .off
 		notificationsCheckbox?.isEnabled = enabled
 		launchAtLoginCheckbox?.state = settings.launchAtLogin ? .on : .off
+		
+		if CommandLineInstaller.isInstalled {
+			installCLIButton?.title = NSLocalizedString("CLIInstalledTitle", value: "Installed at /usr/local/bin/past-due", comment: "Button title shown when /usr/local/bin/past-due is already installed.")
+			installCLIButton?.isEnabled = false
+		} else {
+			installCLIButton?.title = NSLocalizedString("InstallCLITitle", value: "Install 'past-due' Command…", comment: "Button title to install /usr/local/bin/past-due symlink.")
+			installCLIButton?.isEnabled = true
+		}
 	}
 	
 	@objc private func toggleAutomaticChecks(_ sender: NSButton) {
@@ -155,6 +183,15 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		let enabled = (sender.state == .on)
 		do {
 			try BackgroundCheckSettings.shared.setLaunchAtLogin(enabled)
+		} catch {
+			NSAlert(error: error).runModal()
+		}
+		refreshBackgroundUpdateControls()
+	}
+	
+	@objc private func installCLICommand(_ sender: NSButton) {
+		do {
+			try CommandLineInstaller.install()
 		} catch {
 			NSAlert(error: error).runModal()
 		}

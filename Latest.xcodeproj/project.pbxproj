@@ -100,6 +100,9 @@
 		50FEB8912B1D2402006FB75D /* UpdateNotificationPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8902B1D2402006FB75D /* UpdateNotificationPlanner.swift */; };
 		50FEB8932B1D2402006FB75D /* BackgroundUpdateScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8922B1D2402006FB75D /* BackgroundUpdateScheduler.swift */; };
 		50FEB8952B1D2402006FB75D /* BackgroundUpdateCheckTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8942B1D2402006FB75D /* BackgroundUpdateCheckTest.swift */; };
+		50FEB8982B1D2402006FB75D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8972B1D2402006FB75D /* main.swift */; };
+		50FEB89A2B1D2402006FB75D /* CommandLineInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8992B1D2402006FB75D /* CommandLineInterface.swift */; };
+		50FEB89C2B1D2402006FB75D /* CommandLineInterfaceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB89B2B1D2402006FB75D /* CommandLineInterfaceTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -406,6 +409,9 @@
 		50FEB8902B1D2402006FB75D /* UpdateNotificationPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateNotificationPlanner.swift; sourceTree = "<group>"; };
 		50FEB8922B1D2402006FB75D /* BackgroundUpdateScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundUpdateScheduler.swift; sourceTree = "<group>"; };
 		50FEB8942B1D2402006FB75D /* BackgroundUpdateCheckTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundUpdateCheckTest.swift; sourceTree = "<group>"; };
+		50FEB8972B1D2402006FB75D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		50FEB8992B1D2402006FB75D /* CommandLineInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLineInterface.swift; sourceTree = "<group>"; };
+		50FEB89B2B1D2402006FB75D /* CommandLineInterfaceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLineInterfaceTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -472,7 +478,9 @@
 		50290E731E53EB6A00133E3D /* Latest */ = {
 			isa = PBXGroup;
 			children = (
+				50FEB8972B1D2402006FB75D /* main.swift */,
 				50290E741E53EB6A00133E3D /* AppDelegate.swift */,
+				50FEB89D2B1D2402006FB75D /* CLI */,
 				5095122A1FF36326003D2D7F /* Interface */,
 				50A8D2C927D2B071004DBA05 /* View Model */,
 				5095120D1FF3626A003D2D7F /* Model */,
@@ -480,6 +488,14 @@
 				5095120C1FF3623B003D2D7F /* Resources */,
 			);
 			path = Latest;
+			sourceTree = "<group>";
+		};
+		50FEB89D2B1D2402006FB75D /* CLI */ = {
+			isa = PBXGroup;
+			children = (
+				50FEB8992B1D2402006FB75D /* CommandLineInterface.swift */,
+			);
+			path = CLI;
 			sourceTree = "<group>";
 		};
 		502929F8212062A100F00D1C /* Controller */ = {
@@ -784,6 +800,7 @@
 				50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */,
 				50FEB88C2B1D2402006FB75D /* SparkleArchitectureTest.swift */,
 				50FEB8942B1D2402006FB75D /* BackgroundUpdateCheckTest.swift */,
+				50FEB89B2B1D2402006FB75D /* CommandLineInterfaceTest.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -1163,6 +1180,8 @@
 				50FEB88F2B1D2402006FB75D /* BackgroundCheckSettings.swift in Sources */,
 				50FEB8912B1D2402006FB75D /* UpdateNotificationPlanner.swift in Sources */,
 				50FEB8932B1D2402006FB75D /* BackgroundUpdateScheduler.swift in Sources */,
+				50FEB8982B1D2402006FB75D /* main.swift in Sources */,
+				50FEB89A2B1D2402006FB75D /* CommandLineInterface.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1190,6 +1209,7 @@
 				50FEB88B2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift in Sources */,
 				50FEB88D2B1D2402006FB75D /* SparkleArchitectureTest.swift in Sources */,
 				50FEB8952B1D2402006FB75D /* BackgroundUpdateCheckTest.swift in Sources */,
+				50FEB89C2B1D2402006FB75D /* CommandLineInterfaceTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
