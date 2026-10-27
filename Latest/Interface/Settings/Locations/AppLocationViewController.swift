@@ -32,12 +32,15 @@ class AppDirectoryViewController: SettingsTabItemViewController, NSTableViewData
 	// MARK: - Table
 	
 	func numberOfRows(in tableView: NSTableView) -> Int {
-		directoryStore.URLs.count
+		directoryStore.allURLs.count
 	}
 
 	func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
 		guard let view = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier("directoryCellView"), owner: self) as? AppDirectoryCellView else { return nil }
-		view.url = directoryStore.URLs[row]
+		let url = directoryStore.allURLs[row]
+		view.configure(url: url, isEnabled: directoryStore.isEnabled(url)) { [weak self] enabled in
+			self?.directoryStore.setEnabled(enabled, for: url)
+		}
 		
 		return view
 	}
@@ -65,7 +68,7 @@ class AppDirectoryViewController: SettingsTabItemViewController, NSTableViewData
 		case .delete:
 			let selectedIndex = tableView.selectedRow
 			guard selectedIndex != -1 else { return }
-			let url = directoryStore.URLs[selectedIndex]
+			let url = directoryStore.allURLs[selectedIndex]
 			if directoryStore.canRemove(url) {
 				directoryStore.remove(url)
 			}
@@ -79,7 +82,7 @@ class AppDirectoryViewController: SettingsTabItemViewController, NSTableViewData
 		let enabled = if selectedIndex == -1 {
 			false
 		} else {
-			directoryStore.canRemove(directoryStore.URLs[selectedIndex])
+			directoryStore.canRemove(directoryStore.allURLs[selectedIndex])
 		}
 		
 		actionControl.setEnabled(enabled, forSegment: Action.delete.rawValue)

@@ -1,6 +1,6 @@
 
-/* Class = "NSMenuItem"; title = "Quit Latest"; ObjectID = "4sb-4s-VLi"; */
-"4sb-4s-VLi.title" = "Latest 종료";
+/* Class = "NSMenuItem"; title = "Quit Past Due"; ObjectID = "4sb-4s-VLi"; */
+"4sb-4s-VLi.title" = "Past Due 종료";
 
 /* Class = "NSMenuItem"; title = "Copy"; ObjectID = "5cs-kb-AQj"; */
 "5cs-kb-AQj.title" = "복사";
@@ -11,8 +11,8 @@
 /* Class = "NSMenuItem"; title = "Check Spelling While Typing"; ObjectID = "ES5-dd-1TR"; */
 "ES5-dd-1TR.title" = "입력하는 동안 철자 검사";
 
-/* Class = "NSMenuItem"; title = "Latest Help"; ObjectID = "FKE-Sm-Kum"; */
-"FKE-Sm-Kum.title" = "Latest 도움말";
+/* Class = "NSMenuItem"; title = "Past Due Help"; ObjectID = "FKE-Sm-Kum"; */
+"FKE-Sm-Kum.title" = "Past Due 도움말";
 
 /* Class = "NSMenuItem"; title = "Check Document Now"; ObjectID = "eIs-LJ-TQe"; */
 "eIs-LJ-TQe.title" = "지금 문서 확인";
@@ -62,8 +62,8 @@
 /* Class = "NSMenuItem"; title = "Jump to Selection"; ObjectID = "pDo-aP-nIF"; */
 "pDo-aP-nIF.title" = "선택 항목으로 넘어가기";
 
-/* Class = "NSMenu"; title = "Latest"; ObjectID = "uQy-DD-JDr"; */
-"uQy-DD-JDr.title" = "Latest";
+/* Class = "NSMenu"; title = "Past Due"; ObjectID = "uQy-DD-JDr"; */
+"uQy-DD-JDr.title" = "Past Due";
 
 /* Class = "NSMenu"; title = "Spelling"; ObjectID = "ucY-cy-GON"; */
 "ucY-cy-GON.title" = "철자";
@@ -89,8 +89,8 @@
 /* Class = "NSMenuItem"; title = "Find and Replace…"; ObjectID = "1Gu-Ep-ZWZ"; */
 "1Gu-Ep-ZWZ.title" = "찾기 및 바꾸기…";
 
-/* Class = "NSMenuItem"; title = "Latest"; ObjectID = "1Xt-HY-uBw"; */
-"1Xt-HY-uBw.title" = "Latest";
+/* Class = "NSMenuItem"; title = "Past Due"; ObjectID = "1Xt-HY-uBw"; */
+"1Xt-HY-uBw.title" = "Past Due";
 
 /* Class = "NSMenuItem"; title = "Menu"; ObjectID = "1Z9-ws-FMW"; */
 "1Z9-ws-FMW.title" = "메뉴";
@@ -101,8 +101,8 @@
 /* Class = "NSMenuItem"; title = "Check for Updates…"; ObjectID = "4vf-ia-dzo"; */
 "4vf-ia-dzo.title" = "업데이트 확인…";
 
-/* Class = "NSMenuItem"; title = "About Latest"; ObjectID = "5kV-Vb-QxS"; */
-"5kV-Vb-QxS.title" = "Latest 정보";
+/* Class = "NSMenuItem"; title = "About Past Due"; ObjectID = "5kV-Vb-QxS"; */
+"5kV-Vb-QxS.title" = "Past Due 정보";
 
 /* Class = "NSMenuItem"; title = "Correct Spelling Automatically"; ObjectID = "63s-Hc-NQY"; */
 "63s-Hc-NQY.title" = "자동으로 철자 교정하기";
@@ -116,8 +116,8 @@
 /* Class = "NSTextFieldCell"; title = "Label"; ObjectID = "6va-ld-AXD"; */
 "6va-ld-AXD.title" = "<dnl>";
 
-/* Class = "NSMenuItem"; title = "Visit Latest-Website"; ObjectID = "7c2-6r-Saw"; */
-"7c2-6r-Saw.title" = "Latest 웹사이트 방문";
+/* Class = "NSMenuItem"; title = "Visit Past Due Website"; ObjectID = "7c2-6r-Saw"; */
+"7c2-6r-Saw.title" = "Past Due 웹사이트 방문";
 
 /* Class = "NSMenu"; title = "Main Menu"; ObjectID = "AYu-sK-qS6"; */
 "AYu-sK-qS6.title" = "기본 메뉴";
@@ -164,7 +164,7 @@
 /* Class = "NSMenuItem"; title = "Update"; ObjectID = "IAo-SY-fd9"; */
 "IAo-SY-fd9.title" = "업데이트";
 
-/* Class = "NSWindow"; title = "Latest"; ObjectID = "IQv-IB-iLA"; */
+/* Class = "NSWindow"; title = "Past Due"; ObjectID = "IQv-IB-iLA"; */
 "IQv-IB-iLA.title" = "<dnl>";
 
 /* Class = "NSMenuItem"; title = "Select All"; ObjectID = "Id2-BS-gzO"; */
@@ -203,8 +203,8 @@
 /* Class = "NSMenuItem"; title = "Minimize"; ObjectID = "OY7-WF-poV"; */
 "OY7-WF-poV.title" = "최소화";
 
-/* Class = "NSMenuItem"; title = "Hide Latest"; ObjectID = "Olw-nP-bQN"; */
-"Olw-nP-bQN.title" = "Latest 숨김";
+/* Class = "NSMenuItem"; title = "Hide Past Due"; ObjectID = "Olw-nP-bQN"; */
+"Olw-nP-bQN.title" = "Past Due 숨김";
 
 /* Class = "NSMenuItem"; title = "Ignore"; ObjectID = "PS4-wi-kF9"; */
 "PS4-wi-kF9.title" = "무시";
@@ -334,7 +334,7 @@
 "Ntm-I4-heJ.title" = "지원이 제한된 앱";
 "NvM-TY-Zhn.title" = "<dnl>";
 "pNJ-Hl-Qxz.title" = "문제 보고…";
-"rG3-x9-kec.title" = "지원이 제한된 앱을 나열합니다. 업데이트 정보가 오래되었거나 부정확할 수 있으며, Latest에서는 직접 업데이트할 수 없습니다.\n";
+"rG3-x9-kec.title" = "지원이 제한된 앱을 나열합니다. 업데이트 정보가 오래되었거나 부정확할 수 있으며, Past Due에서는 직접 업데이트할 수 없습니다.\n";
 "3jr-8s-u5A.title" = "<dnl>";
 "Pdj-YX-mnM.title" = "<dnl>";
 "V9u-cb-GDY.title" = "<dnl>";

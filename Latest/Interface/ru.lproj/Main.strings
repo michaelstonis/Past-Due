@@ -8,8 +8,8 @@
 /* Class = "NSMenuItem"; title = "Update"; ObjectID = "00n-xr-jcQ"; */
 "00n-xr-jcQ.title" = "Обновить";
 
-/* Class = "NSMenuItem"; title = "Latest"; ObjectID = "1Xt-HY-uBw"; */
-"1Xt-HY-uBw.title" = "Latest";
+/* Class = "NSMenuItem"; title = "Past Due"; ObjectID = "1Xt-HY-uBw"; */
+"1Xt-HY-uBw.title" = "Past Due";
 
 /* Class = "NSMenuItem"; title = "Enter Full Screen"; ObjectID = "4J7-dP-txa"; */
 "4J7-dP-txa.title" = "Полноэкранный режим";
@@ -122,7 +122,7 @@
 /* Class = "NSMenuItem"; title = "Check for Updates…"; ObjectID = "4vf-ia-dzo"; */
 "4vf-ia-dzo.title" = "Проверка обновлений…";
 
-/* Class = "NSMenuItem"; title = "Quit Latest"; ObjectID = "4sb-4s-VLi"; */
+/* Class = "NSMenuItem"; title = "Quit Past Due"; ObjectID = "4sb-4s-VLi"; */
 "4sb-4s-VLi.title" = "Выйти";
 
 /* Class = "NSMenuItem"; title = "Copy"; ObjectID = "5cs-kb-AQj"; */
@@ -140,14 +140,14 @@
 /* Class = "NSTextFieldCell"; title = "Label"; ObjectID = "6va-ld-AXD"; */
 "6va-ld-AXD.title" = "<dnl>";
 
-/* Class = "NSMenuItem"; title = "Visit Latest-Website"; ObjectID = "7c2-6r-Saw"; */
-"7c2-6r-Saw.title" = "Посетить страницу Latest";
+/* Class = "NSMenuItem"; title = "Visit Past Due Website"; ObjectID = "7c2-6r-Saw"; */
+"7c2-6r-Saw.title" = "Посетить страницу Past Due";
 
 /* Class = "NSMenu"; title = "Main Menu"; ObjectID = "AYu-sK-qS6"; */
 "AYu-sK-qS6.title" = "Главное меню";
 
-/* Class = "NSMenuItem"; title = "About Latest"; ObjectID = "5kV-Vb-QxS"; */
-"5kV-Vb-QxS.title" = "О Latest";
+/* Class = "NSMenuItem"; title = "About Past Due"; ObjectID = "5kV-Vb-QxS"; */
+"5kV-Vb-QxS.title" = "О Past Due";
 
 /* Class = "NSMenu"; title = "Menu"; ObjectID = "Ake-Tt-cX3"; */
 "Ake-Tt-cX3.title" = "Меню";
@@ -191,7 +191,7 @@
 /* Class = "NSMenuItem"; title = "Select All"; ObjectID = "Id2-BS-gzO"; */
 "Id2-BS-gzO.title" = "Выбрать всё";
 
-/* Class = "NSMenuItem"; title = "Latest Help"; ObjectID = "FKE-Sm-Kum"; */
+/* Class = "NSMenuItem"; title = "Past Due Help"; ObjectID = "FKE-Sm-Kum"; */
 "FKE-Sm-Kum.title" = "Справка";
 
 /* Class = "NSMenuItem"; title = "Text Replacement"; ObjectID = "G1D-lo-gfr"; */
@@ -200,7 +200,7 @@
 /* Class = "NSMenuItem"; title = "Capitalize"; ObjectID = "GZQ-fq-mFU"; */
 "GZQ-fq-mFU.title" = "Сделать заглавными буквами";
 
-/* Class = "NSWindow"; title = "Latest"; ObjectID = "IQv-IB-iLA"; */
+/* Class = "NSWindow"; title = "Past Due"; ObjectID = "IQv-IB-iLA"; */
 "IQv-IB-iLA.title" = "<dnl>";
 
 /* Class = "NSMenu"; title = "Transformations"; ObjectID = "J6q-tg-1G2"; */
@@ -218,8 +218,8 @@
 /* Class = "NSMenuItem"; title = "Minimize"; ObjectID = "OY7-WF-poV"; */
 "OY7-WF-poV.title" = "Свернуть окно";
 
-/* Class = "NSMenuItem"; title = "Hide Latest"; ObjectID = "Olw-nP-bQN"; */
-"Olw-nP-bQN.title" = "Скрыть Latest";
+/* Class = "NSMenuItem"; title = "Hide Past Due"; ObjectID = "Olw-nP-bQN"; */
+"Olw-nP-bQN.title" = "Скрыть Past Due";
 
 /* Class = "NSTextFieldCell"; title = "App Name"; ObjectID = "SVA-bh-cUe"; */
 "SVA-bh-cUe.title" = "<dnl>";
@@ -308,8 +308,8 @@
 /* Class = "NSMenuItem"; title = "Stop Speaking"; ObjectID = "uGs-GF-i9Z"; */
 "uGs-GF-i9Z.title" = "Перестать говорить";
 
-/* Class = "NSMenu"; title = "Latest"; ObjectID = "uQy-DD-JDr"; */
-"uQy-DD-JDr.title" = "Latest";
+/* Class = "NSMenu"; title = "Past Due"; ObjectID = "uQy-DD-JDr"; */
+"uQy-DD-JDr.title" = "Past Due";
 
 /* Class = "NSTextFieldCell"; title = "Label"; ObjectID = "uWn-a0-oM2"; */
 "uWn-a0-oM2.title" = "<dnl>";
@@ -329,7 +329,7 @@
 "Pdj-YX-mnM.title" = "<dnl>";
 "NC1-U2-waJ.title" = "<dnl>";
 "DfQ-ss-Qv2.title" = "Настройки";
-"rG3-x9-kec.title" = "Список приложений с ограниченной поддержкой. Информация об обновлениях может быть устаревшей или неточной, и обновления не могут быть выполнены непосредственно в Latest.\n";
+"rG3-x9-kec.title" = "Список приложений с ограниченной поддержкой. Информация об обновлениях может быть устаревшей или неточной, и обновления не могут быть выполнены непосредственно в Past Due.\n";
 "3jr-8s-u5A.title" = "<dnl>";
 "ivV-VN-4CO.title" = "Проверить приложения в:";
 "Uax-et-NIt.title" = "Открыть";

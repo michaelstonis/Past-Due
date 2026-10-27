@@ -20,17 +20,17 @@
 /* Class = "NSMenuItem"; title = "Copy"; ObjectID = "5cs-kb-AQj"; */
 "5cs-kb-AQj.title" = "Kopiera";
 
-/* Class = "NSMenuItem"; title = "About Latest"; ObjectID = "5kV-Vb-QxS"; */
-"5kV-Vb-QxS.title" = "Om Latest";
+/* Class = "NSMenuItem"; title = "About Past Due"; ObjectID = "5kV-Vb-QxS"; */
+"5kV-Vb-QxS.title" = "Om Past Due";
 
-/* Class = "NSMenuItem"; title = "Latest"; ObjectID = "1Xt-HY-uBw"; */
-"1Xt-HY-uBw.title" = "Latest";
+/* Class = "NSMenuItem"; title = "Past Due"; ObjectID = "1Xt-HY-uBw"; */
+"1Xt-HY-uBw.title" = "Past Due";
 
 /* Class = "NSMenuItem"; title = "Menu"; ObjectID = "1Z9-ws-FMW"; */
 "1Z9-ws-FMW.title" = "Meny";
 
-/* Class = "NSMenuItem"; title = "Quit Latest"; ObjectID = "4sb-4s-VLi"; */
-"4sb-4s-VLi.title" = "Avsluta Latest";
+/* Class = "NSMenuItem"; title = "Quit Past Due"; ObjectID = "4sb-4s-VLi"; */
+"4sb-4s-VLi.title" = "Avsluta Past Due";
 
 /* Class = "NSMenuItem"; title = "Check for Updates…"; ObjectID = "4vf-ia-dzo"; */
 "4vf-ia-dzo.title" = "Sök efter uppdateringar…";
@@ -71,8 +71,8 @@
 /* Class = "NSTextFieldCell"; title = "Failed to load the release notes!"; ObjectID = "Cm3-IX-Kw4"; */
 "Cm3-IX-Kw4.title" = "Kunde inte ladda versionsinformation!";
 
-/* Class = "NSMenuItem"; title = "Latest Help"; ObjectID = "FKE-Sm-Kum"; */
-"FKE-Sm-Kum.title" = "Latest Hjälp";
+/* Class = "NSMenuItem"; title = "Past Due Help"; ObjectID = "FKE-Sm-Kum"; */
+"FKE-Sm-Kum.title" = "Past Due Hjälp";
 
 /* Class = "NSMenuItem"; title = "Paste"; ObjectID = "GMn-QE-qPC"; */
 "GMn-QE-qPC.title" = "Klistra in";
@@ -95,8 +95,8 @@
 /* Class = "NSMenuItem"; title = "Show All"; ObjectID = "Kd2-mp-pUS"; */
 "Kd2-mp-pUS.title" = "Visa alla";
 
-/* Class = "NSMenuItem"; title = "Hide Latest"; ObjectID = "Olw-nP-bQN"; */
-"Olw-nP-bQN.title" = "Göm Latest";
+/* Class = "NSMenuItem"; title = "Hide Past Due"; ObjectID = "Olw-nP-bQN"; */
+"Olw-nP-bQN.title" = "Göm Past Due";
 
 /* Class = "NSMenuItem"; title = "Ignore"; ObjectID = "PS4-wi-kF9"; */
 "PS4-wi-kF9.title" = "Ignorera";
@@ -245,8 +245,8 @@
 /* Class = "NSMenuItem"; title = "Stop Speaking"; ObjectID = "uGs-GF-i9Z"; */
 "uGs-GF-i9Z.title" = "Sluta tala";
 
-/* Class = "NSMenu"; title = "Latest"; ObjectID = "uQy-DD-JDr"; */
-"uQy-DD-JDr.title" = "Latest";
+/* Class = "NSMenu"; title = "Past Due"; ObjectID = "uQy-DD-JDr"; */
+"uQy-DD-JDr.title" = "Past Due";
 
 /* Class = "NSTextFieldCell"; title = "<dnl>"; ObjectID = "uWn-a0-oM2"; */
 "uWn-a0-oM2.title" = "<dnl>";
@@ -275,8 +275,8 @@
 /* Class = "NSMenu"; title = "Help"; ObjectID = "F2S-fz-NVQ"; */
 "F2S-fz-NVQ.title" = "Hjälp";
 
-/* Class = "NSMenuItem"; title = "Visit Latest-Website"; ObjectID = "7c2-6r-Saw"; */
-"7c2-6r-Saw.title" = "Besök webbsidan för Latest";
+/* Class = "NSMenuItem"; title = "Visit Past Due Website"; ObjectID = "7c2-6r-Saw"; */
+"7c2-6r-Saw.title" = "Besök webbsidan för Past Due";
 
 /* Class = "NSMenu"; title = "Menu"; ObjectID = "Ake-Tt-cX3"; */
 "Ake-Tt-cX3.title" = "Meny";
@@ -328,7 +328,7 @@
 "DfQ-ss-Qv2.title" = "Inställningar";
 "3jr-8s-u5A.title" = "<dnl>";
 "NC1-U2-waJ.title" = "<dnl>";
-"rG3-x9-kec.title" = "Visa appar med begränsat stöd. Uppdateringsinformation kan vara utdaterad eller felaktig, uppdateringar kan inte utföras direkt i Latest.\n";
+"rG3-x9-kec.title" = "Visa appar med begränsat stöd. Uppdateringsinformation kan vara utdaterad eller felaktig, uppdateringar kan inte utföras direkt i Past Due.\n";
 "HfB-8a-u7P.title" = "Appar som inte stöds";
 "9ux-Hr-SHb.title" = "<dnl>";
 "Pdj-YX-mnM.title" = "<dnl>";

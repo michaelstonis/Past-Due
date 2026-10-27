@@ -35,19 +35,55 @@ final class BackgroundUpdateCheckTest: XCTestCase {
 		XCTAssertFalse(settings.automaticChecksEnabled)
 		XCTAssertEqual(settings.checkInterval, .daily)
 		XCTAssertTrue(settings.notificationsEnabled)
+		XCTAssertFalse(settings.showMenuBarExtra)
 		XCTAssertNil(settings.lastCheckDate)
 		XCTAssertTrue(settings.notifiedUpdateKeys.isEmpty)
 
 		settings.automaticChecksEnabled = true
 		settings.checkInterval = .sixHours
 		settings.notificationsEnabled = false
+		settings.showMenuBarExtra = true
 		settings.notifiedUpdateKeys = ["com.example.one|1.0-100", "com.example.two|2.0-200"]
 
 		let reloaded = BackgroundCheckSettings(defaults: defaults)
 		XCTAssertTrue(reloaded.automaticChecksEnabled)
 		XCTAssertEqual(reloaded.checkInterval, .sixHours)
 		XCTAssertFalse(reloaded.notificationsEnabled)
+		XCTAssertTrue(reloaded.showMenuBarExtra)
 		XCTAssertEqual(reloaded.notifiedUpdateKeys, ["com.example.one|1.0-100", "com.example.two|2.0-200"])
+	}
+
+	func testAppDirectoryStoreAllowsTogglingDefaultAndCustomDirectories() throws {
+		let suiteName = "AppDirectoryStoreTest.\(UUID().uuidString)"
+		let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+		addTeardownBlock {
+			defaults.removePersistentDomain(forName: suiteName)
+		}
+
+		var callbackCount = 0
+		let store = AppDirectoryStore(defaults: defaults) {
+			callbackCount += 1
+		}
+
+		guard let firstDefault = AppDirectoryStore.defaultURLs.first else {
+			return
+		}
+
+		// Default directories are enabled by default and cannot be deleted, but CAN be toggled off
+		XCTAssertTrue(store.isEnabled(firstDefault))
+		XCTAssertFalse(store.canRemove(firstDefault))
+		XCTAssertTrue(store.URLs.contains(firstDefault))
+
+		store.setEnabled(false, for: firstDefault)
+		XCTAssertFalse(store.isEnabled(firstDefault))
+		XCTAssertTrue(store.allURLs.contains(firstDefault))
+		XCTAssertFalse(store.URLs.contains(firstDefault))
+		XCTAssertGreaterThan(callbackCount, 0)
+
+		// Re-enabling restores it to active URLs
+		store.setEnabled(true, for: firstDefault)
+		XCTAssertTrue(store.isEnabled(firstDefault))
+		XCTAssertTrue(store.URLs.contains(firstDefault))
 	}
 
 	func testNotificationPlannerReportsOnlyUnseenUpdatesAndPrunesResolvedOnes() {

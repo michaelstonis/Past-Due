@@ -11,8 +11,8 @@
 /* Class = "NSMenuItem"; title = "Enter Full Screen"; ObjectID = "4J7-dP-txa"; */
 "4J7-dP-txa.title" = "Tam Ekran Modu";
 
-/* Class = "NSMenuItem"; title = "Quit Latest"; ObjectID = "4sb-4s-VLi"; */
-"4sb-4s-VLi.title" = "Latest'ten Çık";
+/* Class = "NSMenuItem"; title = "Quit Past Due"; ObjectID = "4sb-4s-VLi"; */
+"4sb-4s-VLi.title" = "Past Due'ten Çık";
 
 /* Class = "NSMenuItem"; title = "Check for Updates…"; ObjectID = "4vf-ia-dzo"; */
 "4vf-ia-dzo.title" = "Güncellemeleri Denetle…";
@@ -20,14 +20,14 @@
 /* Class = "NSMenuItem"; title = "Copy"; ObjectID = "5cs-kb-AQj"; */
 "5cs-kb-AQj.title" = "Kopyala";
 
-/* Class = "NSMenuItem"; title = "About Latest"; ObjectID = "5kV-Vb-QxS"; */
-"5kV-Vb-QxS.title" = "Latest Hakkında";
+/* Class = "NSMenuItem"; title = "About Past Due"; ObjectID = "5kV-Vb-QxS"; */
+"5kV-Vb-QxS.title" = "Past Due Hakkında";
 
 /* Class = "NSMenuItem"; title = "Correct Spelling Automatically"; ObjectID = "63s-Hc-NQY"; */
 "63s-Hc-NQY.title" = "Yazımı Otomatik Doğrula";
 
-/* Class = "NSMenuItem"; title = "Latest"; ObjectID = "1Xt-HY-uBw"; */
-"1Xt-HY-uBw.title" = "Latest";
+/* Class = "NSMenuItem"; title = "Past Due"; ObjectID = "1Xt-HY-uBw"; */
+"1Xt-HY-uBw.title" = "Past Due";
 
 /* Class = "NSMenuItem"; title = "Undo"; ObjectID = "Ah1-jH-gCv"; */
 "Ah1-jH-gCv.title" = "Geri Al";
@@ -56,8 +56,8 @@
 /* Class = "NSMenu"; title = "Help"; ObjectID = "F2S-fz-NVQ"; */
 "F2S-fz-NVQ.title" = "Yardım";
 
-/* Class = "NSMenuItem"; title = "Latest Help"; ObjectID = "FKE-Sm-Kum"; */
-"FKE-Sm-Kum.title" = "Latest Yardım";
+/* Class = "NSMenuItem"; title = "Past Due Help"; ObjectID = "FKE-Sm-Kum"; */
+"FKE-Sm-Kum.title" = "Past Due Yardım";
 
 /* Class = "NSButton"; ibShadowedToolTip = "Reload"; ObjectID = "FM4-aR-lhK"; */
 "FM4-aR-lhK.ibShadowedToolTip" = "Tekrar yükle";
@@ -74,8 +74,8 @@
 /* Class = "NSMenuItem"; title = "View"; ObjectID = "H8h-7b-M4v"; */
 "H8h-7b-M4v.title" = "Görüntüle";
 
-/* Class = "NSMenuItem"; title = "Visit Latest-Website"; ObjectID = "7c2-6r-Saw"; */
-"7c2-6r-Saw.title" = "Latest web sayfasını ziyaret et";
+/* Class = "NSMenuItem"; title = "Visit Past Due Website"; ObjectID = "7c2-6r-Saw"; */
+"7c2-6r-Saw.title" = "Past Due web sayfasını ziyaret et";
 
 /* Class = "NSMenu"; title = "Main Menu"; ObjectID = "AYu-sK-qS6"; */
 "AYu-sK-qS6.title" = "Ana Menü";
@@ -86,8 +86,8 @@
 /* Class = "NSMenu"; title = "Sort By"; ObjectID = "1fA-1k-qER"; */
 "1fA-1k-qER.title" = "Sırala";
 
-/* Class = "NSMenu"; title = "Latest"; ObjectID = "uQy-DD-JDr"; */
-"uQy-DD-JDr.title" = "Latest";
+/* Class = "NSMenu"; title = "Past Due"; ObjectID = "uQy-DD-JDr"; */
+"uQy-DD-JDr.title" = "Past Due";
 
 /* Class = "NSTextFieldCell"; title = "Loading Release Notes"; ObjectID = "iLi-Yb-UfX"; */
 "iLi-Yb-UfX.title" = "Sürüm Notları Yükleniyor";
@@ -257,8 +257,8 @@
 /* Class = "NSMenuItem"; title = "Redo"; ObjectID = "Yj4-SM-ocg"; */
 "Yj4-SM-ocg.title" = "Yinele";
 
-/* Class = "NSMenuItem"; title = "Hide Latest"; ObjectID = "Olw-nP-bQN"; */
-"Olw-nP-bQN.title" = "Latest'ı gizle";
+/* Class = "NSMenuItem"; title = "Hide Past Due"; ObjectID = "Olw-nP-bQN"; */
+"Olw-nP-bQN.title" = "Past Due'ı gizle";
 
 /* Class = "NSMenuItem"; title = "Paste and Match Style"; ObjectID = "x6Q-gr-lO2"; */
 "x6Q-gr-lO2.title" = "Yapıştır ve Stili Eşleştir";
@@ -311,4 +311,4 @@
 "Ntm-I4-heJ.title" = "Sınırlı destekli uygulamalar";
 "NvM-TY-Zhn.title" = "<dnl>";
 "pNJ-Hl-Qxz.title" = "Sorunu Bildir…";
-"rG3-x9-kec.title" = "Sınırlı destekli uygulamaları listele. Güncelleme bilgileri eski veya hatalı olabilir ve güncellemeler Latest üzerinden doğrudan gerçekleştirilemez.\n";
+"rG3-x9-kec.title" = "Sınırlı destekli uygulamaları listele. Güncelleme bilgileri eski veya hatalı olabilir ve güncellemeler Past Due üzerinden doğrudan gerçekleştirilemez.\n";

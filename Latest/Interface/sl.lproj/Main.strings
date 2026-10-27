@@ -8,8 +8,8 @@
 /* Class = "NSMenu"; title = "Help"; ObjectID = "F2S-fz-NVQ"; */
 "F2S-fz-NVQ.title" = "Pomoč";
 
-/* Class = "NSMenuItem"; title = "About Latest"; ObjectID = "5kV-Vb-QxS"; */
-"5kV-Vb-QxS.title" = "O Latest";
+/* Class = "NSMenuItem"; title = "About Past Due"; ObjectID = "5kV-Vb-QxS"; */
+"5kV-Vb-QxS.title" = "O Past Due";
 
 /* Class = "NSMenuItem"; title = "Menu"; ObjectID = "1Z9-ws-FMW"; */
 "1Z9-ws-FMW.title" = "Meni";
@@ -23,10 +23,10 @@
 /* Class = "NSMenuItem"; title = "Enter Full Screen"; ObjectID = "4J7-dP-txa"; */
 "4J7-dP-txa.title" = "Celozaslonski Način";
 
-/* Class = "NSMenuItem"; title = "Visit Latest-Website"; ObjectID = "7c2-6r-Saw"; */
-"7c2-6r-Saw.title" = "Obišči Latest Spletno Stran";
+/* Class = "NSMenuItem"; title = "Visit Past Due Website"; ObjectID = "7c2-6r-Saw"; */
+"7c2-6r-Saw.title" = "Obišči Past Due Spletno Stran";
 
-/* Class = "NSMenuItem"; title = "Quit Latest"; ObjectID = "4sb-4s-VLi"; */
+/* Class = "NSMenuItem"; title = "Quit Past Due"; ObjectID = "4sb-4s-VLi"; */
 "4sb-4s-VLi.title" = "Zapri Aplikacijo";
 
 /* Class = "NSMenuItem"; title = "Check for Updates…"; ObjectID = "4vf-ia-dzo"; */
@@ -44,8 +44,8 @@
 /* Class = "NSTextFieldCell"; title = "Failed to load the release notes!"; ObjectID = "Cm3-IX-Kw4"; */
 "Cm3-IX-Kw4.title" = "Nalaganje opomb ob izdaji neuspešno!";
 
-/* Class = "NSMenuItem"; title = "Latest"; ObjectID = "1Xt-HY-uBw"; */
-"1Xt-HY-uBw.title" = "Latest";
+/* Class = "NSMenuItem"; title = "Past Due"; ObjectID = "1Xt-HY-uBw"; */
+"1Xt-HY-uBw.title" = "Past Due";
 
 /* Class = "NSMenu"; title = "Menu"; ObjectID = "Ake-Tt-cX3"; */
 "Ake-Tt-cX3.title" = "Meni";

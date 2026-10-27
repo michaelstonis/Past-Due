@@ -1,3 +1,12 @@
+# 1.3.0
+#### New and Improved:
+- **Menu Bar Extra**: Added an optional **Show Past Due in the menu bar** setting in **Settings → General** that displays an `NSStatusItem` with the live available update count, quick access to available updates, and an **Update All** action (#16 / upstream #64).
+- **Toggleable Scan Directories**: Added per-folder checkboxes in **Settings → Locations** so default directories (`/Applications`, `~/Applications`) and custom folders can be toggled on or off individually (#19 / upstream #512, #445, #49).
+
+#### Bug Fixes:
+- Fixed the first column width in **Settings → General** so `Frequency:` and `Command Line:` labels size dynamically without clipping.
+- Replaced remaining user-facing `"Latest"` strings across localized menu and UI `.strings` files with `"Past Due"`.
+
 # 1.2.2
 #### Bug Fixes:
 - Improve version heading typography, spacing, and live reload refresh.

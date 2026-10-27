@@ -32,7 +32,7 @@
 /* Class = "NSTextFieldCell"; title = "Failed to load the release notes!"; ObjectID = "Cm3-IX-Kw4"; */
 "Cm3-IX-Kw4.title" = "Не вдалося завантажити примітки до випуску!";
 
-/* Class = "NSMenuItem"; title = "Latest"; ObjectID = "1Xt-HY-uBw"; */
+/* Class = "NSMenuItem"; title = "Past Due"; ObjectID = "1Xt-HY-uBw"; */
 "1Xt-HY-uBw.title" = "Останнє";
 
 /* Class = "NSMenuItem"; title = "Menu"; ObjectID = "1Z9-ws-FMW"; */
@@ -41,8 +41,8 @@
 /* Class = "NSMenuItem"; title = "Enter Full Screen"; ObjectID = "4J7-dP-txa"; */
 "4J7-dP-txa.title" = "Увійти до повноекранного режиму";
 
-/* Class = "NSMenuItem"; title = "Quit Latest"; ObjectID = "4sb-4s-VLi"; */
-"4sb-4s-VLi.title" = "Закрити Latest";
+/* Class = "NSMenuItem"; title = "Quit Past Due"; ObjectID = "4sb-4s-VLi"; */
+"4sb-4s-VLi.title" = "Закрити Past Due";
 
 /* Class = "NSMenuItem"; title = "Check for Updates…"; ObjectID = "4vf-ia-dzo"; */
 "4vf-ia-dzo.title" = "Перевірка оновлень…";
@@ -50,11 +50,11 @@
 /* Class = "NSMenuItem"; title = "Copy"; ObjectID = "5cs-kb-AQj"; */
 "5cs-kb-AQj.title" = "Копіювати";
 
-/* Class = "NSMenuItem"; title = "About Latest"; ObjectID = "5kV-Vb-QxS"; */
-"5kV-Vb-QxS.title" = "Про Latest";
+/* Class = "NSMenuItem"; title = "About Past Due"; ObjectID = "5kV-Vb-QxS"; */
+"5kV-Vb-QxS.title" = "Про Past Due";
 
-/* Class = "NSMenuItem"; title = "Visit Latest-Website"; ObjectID = "7c2-6r-Saw"; */
-"7c2-6r-Saw.title" = "Відвідати сайт Latest";
+/* Class = "NSMenuItem"; title = "Visit Past Due Website"; ObjectID = "7c2-6r-Saw"; */
+"7c2-6r-Saw.title" = "Відвідати сайт Past Due";
 
 /* Class = "NSMenu"; title = "Main Menu"; ObjectID = "AYu-sK-qS6"; */
 "AYu-sK-qS6.title" = "Головне меню";
@@ -119,8 +119,8 @@
 /* Class = "NSMenu"; title = "Help"; ObjectID = "F2S-fz-NVQ"; */
 "F2S-fz-NVQ.title" = "Допомога";
 
-/* Class = "NSMenuItem"; title = "Latest Help"; ObjectID = "FKE-Sm-Kum"; */
-"FKE-Sm-Kum.title" = "Допомога Latest";
+/* Class = "NSMenuItem"; title = "Past Due Help"; ObjectID = "FKE-Sm-Kum"; */
+"FKE-Sm-Kum.title" = "Допомога Past Due";
 
 /* Class = "NSButton"; ibShadowedToolTip = "Reload"; ObjectID = "FM4-aR-lhK"; */
 "FM4-aR-lhK.ibShadowedToolTip" = "Перезавантажити";
@@ -173,8 +173,8 @@
 /* Class = "NSToolbarItem"; paletteLabel = "Progress"; ObjectID = "OLo-39-3Sm"; */
 "OLo-39-3Sm.paletteLabel" = "Прогрес";
 
-/* Class = "NSMenuItem"; title = "Hide Latest"; ObjectID = "Olw-nP-bQN"; */
-"Olw-nP-bQN.title" = "Сховати Latest";
+/* Class = "NSMenuItem"; title = "Hide Past Due"; ObjectID = "Olw-nP-bQN"; */
+"Olw-nP-bQN.title" = "Сховати Past Due";
 
 /* Class = "NSMenuItem"; title = "Ignore"; ObjectID = "PS4-wi-kF9"; */
 "PS4-wi-kF9.title" = "Ігнорувати";
@@ -290,8 +290,8 @@
 /* Class = "NSMenuItem"; title = "Stop Speaking"; ObjectID = "uGs-GF-i9Z"; */
 "uGs-GF-i9Z.title" = "Припинити говорити";
 
-/* Class = "NSMenu"; title = "Latest"; ObjectID = "uQy-DD-JDr"; */
-"uQy-DD-JDr.title" = "Latest";
+/* Class = "NSMenu"; title = "Past Due"; ObjectID = "uQy-DD-JDr"; */
+"uQy-DD-JDr.title" = "Past Due";
 
 /* Class = "NSTextFieldCell"; title = "<dnl>"; ObjectID = "uWn-a0-oM2"; */
 "uWn-a0-oM2.title" = "<dnl>";
@@ -341,4 +341,4 @@
 "DfQ-ss-Qv2.title" = "Налаштування";
 "9ux-Hr-SHb.title" = "<dnl>";
 "Mdn-MF-57Q.title" = "Показувати програми без доступної інформації про оновлення.";
-"rG3-x9-kec.title" = "Список додатків з обмеженою підтримкою. Інформація про оновлення може бути застарілою або неточною, і оновлення не можна виконати безпосередньо в Latest.\n";
+"rG3-x9-kec.title" = "Список додатків з обмеженою підтримкою. Інформація про оновлення може бути застарілою або неточною, і оновлення не можна виконати безпосередньо в Past Due.\n";

@@ -15,6 +15,7 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 	private var intervalPopUpButton: NSPopUpButton?
 	private var notificationsCheckbox: NSButton?
 	private var launchAtLoginCheckbox: NSButton?
+	private var showMenuBarCheckbox: NSButton?
 	private var installCLIButton: NSButton?
 	
 	override func viewDidLoad() {
@@ -58,6 +59,25 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			return
 		}
 		
+		// Allow the first column to expand dynamically to fit wider labels ("Frequency:", "Command Line:")
+		// instead of being pinned to the "Include:" label's hugging priority (1000 in Main.storyboard).
+		if gridView.numberOfColumns > 0 {
+			for rowIndex in 0..<gridView.numberOfRows {
+				if let cellView = gridView.cell(atColumnIndex: 0, rowIndex: rowIndex).contentView {
+					cellView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+					cellView.setContentCompressionResistancePriority(.required, for: .horizontal)
+				}
+			}
+		}
+		
+		func makeSectionLabel(_ title: String) -> NSTextField {
+			let label = NSTextField(labelWithString: title)
+			label.alignment = .right
+			label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+			label.setContentCompressionResistancePriority(.required, for: .horizontal)
+			return label
+		}
+		
 		let separator = NSBox()
 		separator.boxType = .separator
 		let separatorRow = gridView.addRow(with: [NSGridCell.emptyContentView, separator])
@@ -65,8 +85,7 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		separatorRow.bottomPadding = 6
 		separatorRow.mergeCells(in: NSRange(location: 0, length: 2))
 		
-		let sectionLabel = NSTextField(labelWithString: NSLocalizedString("BackgroundUpdatesSectionLabel", value: "Updates:", comment: "Label in General settings for background update check options."))
-		sectionLabel.alignment = .right
+		let sectionLabel = makeSectionLabel(NSLocalizedString("BackgroundUpdatesSectionLabel", value: "Updates:", comment: "Label in General settings for background update check options."))
 		
 		let autoCheckButton = NSButton(
 			checkboxWithTitle: NSLocalizedString("CheckAutomaticallyTitle", value: "Check for updates in the background", comment: "Checkbox title to enable periodic background update checks."),
@@ -74,10 +93,10 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			action: #selector(toggleAutomaticChecks(_:))
 		)
 		self.automaticChecksCheckbox = autoCheckButton
-		gridView.addRow(with: [sectionLabel, autoCheckButton])
+		let autoCheckRow = gridView.addRow(with: [sectionLabel, autoCheckButton])
+		autoCheckRow.cell(at: 1).xPlacement = .leading
 		
-		let frequencyLabel = NSTextField(labelWithString: NSLocalizedString("CheckFrequencyLabel", value: "Frequency:", comment: "Label for the background update check frequency pop-up button."))
-		frequencyLabel.alignment = .right
+		let frequencyLabel = makeSectionLabel(NSLocalizedString("CheckFrequencyLabel", value: "Frequency:", comment: "Label for the background update check frequency pop-up button."))
 		
 		let popUp = NSPopUpButton(frame: .zero, pullsDown: false)
 		for interval in BackgroundCheckSettings.Interval.allCases {
@@ -90,6 +109,7 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		let frequencyRow = gridView.addRow(with: [frequencyLabel, popUp])
 		frequencyRow.topPadding = 4
 		frequencyRow.bottomPadding = 2
+		frequencyRow.cell(at: 1).xPlacement = .leading
 		
 		let notifyButton = NSButton(
 			checkboxWithTitle: NSLocalizedString("NotifyWhenUpdatesAvailableTitle", value: "Notify when new updates are available", comment: "Checkbox title to post a macOS user notification when background checks find new updates."),
@@ -97,7 +117,8 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			action: #selector(toggleNotifications(_:))
 		)
 		self.notificationsCheckbox = notifyButton
-		gridView.addRow(with: [NSGridCell.emptyContentView, notifyButton])
+		let notifyRow = gridView.addRow(with: [NSGridCell.emptyContentView, notifyButton])
+		notifyRow.cell(at: 1).xPlacement = .leading
 		
 		let loginButton = NSButton(
 			checkboxWithTitle: NSLocalizedString("LaunchAtLoginTitle", value: "Open Past Due at login", comment: "Checkbox title to register Past Due as a login item."),
@@ -105,7 +126,17 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			action: #selector(toggleLaunchAtLogin(_:))
 		)
 		self.launchAtLoginCheckbox = loginButton
-		gridView.addRow(with: [NSGridCell.emptyContentView, loginButton])
+		let loginRow = gridView.addRow(with: [NSGridCell.emptyContentView, loginButton])
+		loginRow.cell(at: 1).xPlacement = .leading
+		
+		let menuBarButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("ShowMenuBarExtraTitle", value: "Show Past Due in the menu bar", comment: "Checkbox title to show an NSStatusItem in the macOS menu bar with the available update count."),
+			target: self,
+			action: #selector(toggleShowMenuBarExtra(_:))
+		)
+		self.showMenuBarCheckbox = menuBarButton
+		let menuBarRow = gridView.addRow(with: [NSGridCell.emptyContentView, menuBarButton])
+		menuBarRow.cell(at: 1).xPlacement = .leading
 		
 		let cliSeparator = NSBox()
 		cliSeparator.boxType = .separator
@@ -114,8 +145,7 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		cliSeparatorRow.bottomPadding = 6
 		cliSeparatorRow.mergeCells(in: NSRange(location: 0, length: 2))
 		
-		let cliLabel = NSTextField(labelWithString: NSLocalizedString("CommandLineSectionLabel", value: "Command Line:", comment: "Label in General settings for installing the past-due CLI command."))
-		cliLabel.alignment = .right
+		let cliLabel = makeSectionLabel(NSLocalizedString("CommandLineSectionLabel", value: "Command Line:", comment: "Label in General settings for installing the past-due CLI command."))
 		
 		let cliButton = NSButton(
 			title: NSLocalizedString("InstallCLITitle", value: "Install 'past-due' Command…", comment: "Button title to install /usr/local/bin/past-due symlink."),
@@ -124,7 +154,8 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		)
 		cliButton.bezelStyle = .rounded
 		self.installCLIButton = cliButton
-		gridView.addRow(with: [cliLabel, cliButton])
+		let cliRow = gridView.addRow(with: [cliLabel, cliButton])
+		cliRow.cell(at: 1).xPlacement = .leading
 		
 		refreshBackgroundUpdateControls()
 		
@@ -142,6 +173,7 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		notificationsCheckbox?.state = settings.notificationsEnabled ? .on : .off
 		notificationsCheckbox?.isEnabled = enabled
 		launchAtLoginCheckbox?.state = settings.launchAtLogin ? .on : .off
+		showMenuBarCheckbox?.state = settings.showMenuBarExtra ? .on : .off
 		
 		if CommandLineInstaller.isInstalled {
 			installCLIButton?.title = NSLocalizedString("CLIInstalledTitle", value: "Installed at /usr/local/bin/past-due", comment: "Button title shown when /usr/local/bin/past-due is already installed.")
@@ -187,6 +219,10 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			NSAlert(error: error).runModal()
 		}
 		refreshBackgroundUpdateControls()
+	}
+	
+	@objc private func toggleShowMenuBarExtra(_ sender: NSButton) {
+		BackgroundCheckSettings.shared.showMenuBarExtra = (sender.state == .on)
 	}
 	
 	@objc private func installCLICommand(_ sender: NSButton) {

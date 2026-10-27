@@ -46,7 +46,7 @@
 /* Description of button that opens an error dialogue. */
 "ErrorButtonAccessibilityTitle" = "Error while updating app";
 
-/* Action to update a given app outside of Latest. The placeholder is filled with the name of the external updater. (App Store, App Name) */
+/* Action to update a given app outside of Past Due. The placeholder is filled with the name of the external updater. (App Store, App Name) */
 "ExternalUpdateAction" = "Update in %@";
 
 /* An explanatory text indicating where the update will be performed. The placeholder will be filled with the name of the external updater (App Store, App Name). The text will appear below the Update button, so that it reads: "Update in XY" */
@@ -142,22 +142,22 @@
 /* The source name for apps loaded from third-party websites. */
 "WebSource" = "Web";
 
-/* A compact label used for apps which are partially supported by Latest. */
+/* A compact label used for apps which are partially supported by Past Due. */
 "LimitedSupportCompactLabel" = "Limited";
 
-/* A label used for apps which are partially supported by Latest. */
+/* A label used for apps which are partially supported by Past Due. */
 "LimitedSupportLabel" = "Limited support";
 
-/* A compact label used for apps which are fully supported by Latest. */
+/* A compact label used for apps which are fully supported by Past Due. */
 "SupportedCompactLabel" = "Supported";
 
-/* A label used for apps which are fully supported by Latest. */
+/* A label used for apps which are fully supported by Past Due. */
 "SupportedLabel" = "Supported";
 
-/* A compact label used for apps which are not supported by Latest. */
+/* A compact label used for apps which are not supported by Past Due. */
 "UnsupportedCompactLabel" = "Unsupported";
 
-/* A label used for apps which are not supported by Latest. */
+/* A label used for apps which are not supported by Past Due. */
 "UnsupportedLabel" = "No support";
 
 /* Tool tip of a toolbar button that checks for updates */

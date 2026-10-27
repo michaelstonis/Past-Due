@@ -58,10 +58,9 @@ class AppLibrary {
 	}
 		
 	private func setupDirectoryObservers() {
-		// Use a dispatch group for the initial setup to get contents for all directories before gathering apps.
-		// New directory observers may emit more than once during startup, but the initial load must only
-		// satisfy the group a single time.
-		let dispatchGroup = self.directories.isEmpty ? DispatchGroup() : nil
+		// Use a dispatch group to gather contents for any newly added directories before updating apps.
+		// If directories were only removed or disabled, the group notifies immediately.
+		let dispatchGroup = DispatchGroup()
 		let existingDirectories = self.directories
 		
 		// Setup directories
@@ -74,7 +73,7 @@ class AppLibrary {
 				return (url, existingDirectory)
 			}
 			
-			dispatchGroup?.enter()
+			dispatchGroup.enter()
 			let initialLoadLock = NSLock()
 			var initialLoadCompleted = false
 			
@@ -89,7 +88,7 @@ class AppLibrary {
 					initialLoadLock.unlock()
 					
 					if isInitialLoad {
-						dispatchGroup?.leave()
+						dispatchGroup.leave()
 					} else {
 						// Schedule update
 						self.updateScheduler.add(data: 1)
@@ -101,7 +100,7 @@ class AppLibrary {
 			))
 		})
 		
-		dispatchGroup?.notify(queue: .global()) {
+		dispatchGroup.notify(queue: .global()) {
 			// Call update immediately. Using the scheduler delays the update.
 			self.performUpdate()
 		}

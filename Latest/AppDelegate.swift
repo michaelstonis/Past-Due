@@ -15,6 +15,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.showMainWindow()
         }
         BackgroundUpdateScheduler.shared.start()
+        
+        MenuBarController.shared.showMainWindowHandler = { [weak self] in
+            self?.showMainWindow()
+        }
+        MenuBarController.shared.start()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -29,8 +34,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	}
 	
 	func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-		// Keep running in the background when scheduled automatic update checks are enabled
-		return !BackgroundCheckSettings.shared.automaticChecksEnabled
+		// Keep running in the background when scheduled automatic update checks or the menu bar extra are enabled
+		let settings = BackgroundCheckSettings.shared
+		return !settings.automaticChecksEnabled && !settings.showMenuBarExtra
 	}
 	
 	private func showMainWindow() {

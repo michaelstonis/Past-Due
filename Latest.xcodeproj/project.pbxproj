@@ -103,6 +103,7 @@
 		50FEB8982B1D2402006FB75D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8972B1D2402006FB75D /* main.swift */; };
 		50FEB89A2B1D2402006FB75D /* CommandLineInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8992B1D2402006FB75D /* CommandLineInterface.swift */; };
 		50FEB89C2B1D2402006FB75D /* CommandLineInterfaceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB89B2B1D2402006FB75D /* CommandLineInterfaceTest.swift */; };
+		50FEB89F2B1D2402006FB75D /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB89E2B1D2402006FB75D /* MenuBarController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -412,6 +413,7 @@
 		50FEB8972B1D2402006FB75D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		50FEB8992B1D2402006FB75D /* CommandLineInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLineInterface.swift; sourceTree = "<group>"; };
 		50FEB89B2B1D2402006FB75D /* CommandLineInterfaceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLineInterfaceTest.swift; sourceTree = "<group>"; };
+		50FEB89E2B1D2402006FB75D /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -743,9 +745,18 @@
 			children = (
 				50290E7A1E53EB6A00133E3D /* Main.storyboard */,
 				5093EF9A2B9139E80041E6C1 /* Main Window */,
+				50FEB8A02B1D2402006FB75D /* Menu Bar */,
 				504FB4AA2B76CA3B009C73E9 /* Settings */,
 			);
 			path = Interface;
+			sourceTree = "<group>";
+		};
+		50FEB8A02B1D2402006FB75D /* Menu Bar */ = {
+			isa = PBXGroup;
+			children = (
+				50FEB89E2B1D2402006FB75D /* MenuBarController.swift */,
+			);
+			path = "Menu Bar";
 			sourceTree = "<group>";
 		};
 		5095122E1FF3634E003D2D7F /* Window Controllers */ = {
@@ -1182,6 +1193,7 @@
 				50FEB8932B1D2402006FB75D /* BackgroundUpdateScheduler.swift in Sources */,
 				50FEB8982B1D2402006FB75D /* main.swift in Sources */,
 				50FEB89A2B1D2402006FB75D /* CommandLineInterface.swift in Sources */,
+				50FEB89F2B1D2402006FB75D /* MenuBarController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

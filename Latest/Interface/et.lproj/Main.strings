@@ -6,7 +6,7 @@
 "4J7-dP-txa.title" = "Täisekraanivaade";
 "4sb-4s-VLi.title" = "Sulge rakendus";
 "5cs-kb-AQj.title" = "Kopeeri";
-"5kV-Vb-QxS.title" = "Rakenduse teave: Latest";
+"5kV-Vb-QxS.title" = "Rakenduse teave: Past Due";
 "4vf-ia-dzo.title" = "Kontrolli uuendusi…";
 "3jr-8s-u5A.title" = "<dnl>";
 "63s-Hc-NQY.title" = "Paranda automaatselt õigekirja";
@@ -26,7 +26,7 @@
 "eIs-LJ-TQe.title" = "Kontrolli nüüd dokumenti";
 "ES5-dd-1TR.title" = "Kontrolli õigekirja sisestamise ajal";
 "F2S-fz-NVQ.title" = "Abiteave";
-"FKE-Sm-Kum.title" = "Abiteave: Latest";
+"FKE-Sm-Kum.title" = "Abiteave: Past Due";
 "FM4-aR-lhK.ibShadowedToolTip" = "Laadi uuesti";
 "G1D-lo-gfr.title" = "Teksti asendus";
 "GMn-QE-qPC.title" = "Aseta";
@@ -62,7 +62,7 @@
 "o46-Ym-MCY.title" = "Toeta meid rahaliselt";
 "OLo-39-3Sm.label" = "Edenemine";
 "OLo-39-3Sm.paletteLabel" = "Edenemine";
-"Olw-nP-bQN.title" = "Peida Latest";
+"Olw-nP-bQN.title" = "Peida Past Due";
 "OY7-WF-poV.title" = "Vähenda";
 "Pdj-YX-mnM.title" = "<dnl>";
 "pDo-aP-nIF.title" = "Hüppa valiku juurde";
@@ -82,7 +82,7 @@
 "Uax-et-NIt.title" = "Ava";
 "ucY-cy-GON.title" = "Õigekirjakontroll";
 "uGs-GF-i9Z.title" = "Lõpeta rääkimine";
-"uQy-DD-JDr.title" = "Latest";
+"uQy-DD-JDr.title" = "Past Due";
 "UVA-tb-pA9.title" = "Asendused";
 "uw5-pW-jNu.title" = "Nutikriipsud";
 "V9u-cb-GDY.title" = "<dnl>";
@@ -112,4 +112,4 @@
 "Ntm-I4-heJ.title" = "Piiratud toega rakendused";
 "NvM-TY-Zhn.title" = "<dnl>";
 "pNJ-Hl-Qxz.title" = "Teata veast või problemist…";
-"rG3-x9-kec.title" = "Näita piiratud toega rakendusi. Uuendamise teave võib olla aegunud või ebatäpne ning Latest ei saa uuendusi otseselt teha.\n";
+"rG3-x9-kec.title" = "Näita piiratud toega rakendusi. Uuendamise teave võib olla aegunud või ebatäpne ning Past Due ei saa uuendusi otseselt teha.\n";

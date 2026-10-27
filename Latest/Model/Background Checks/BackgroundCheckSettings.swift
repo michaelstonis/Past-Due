@@ -11,6 +11,7 @@ import ServiceManagement
 private let AutomaticChecksEnabledKey = "AutomaticUpdateChecksEnabledKey"
 private let CheckIntervalKey = "AutomaticUpdateCheckIntervalKey"
 private let NotificationsEnabledKey = "UpdateNotificationsEnabledKey"
+private let ShowMenuBarExtraKey = "ShowMenuBarExtraKey"
 private let LastCheckDateKey = "LastUpdateCheckDateKey"
 private let NotifiedUpdateKeysKey = "NotifiedUpdateKeysKey"
 
@@ -54,7 +55,8 @@ struct BackgroundCheckSettings: Observable {
 		defaults.register(defaults: [
 			AutomaticChecksEnabledKey: false,
 			CheckIntervalKey: Interval.daily.rawValue,
-			NotificationsEnabledKey: true
+			NotificationsEnabledKey: true,
+			ShowMenuBarExtraKey: false
 		])
 	}
 	
@@ -79,6 +81,12 @@ struct BackgroundCheckSettings: Observable {
 	var notificationsEnabled: Bool {
 		get { defaults.bool(forKey: NotificationsEnabledKey) }
 		set { set(newValue, forKey: NotificationsEnabledKey) }
+	}
+	
+	/// Whether an NSStatusItem is shown in the macOS menu bar displaying the available update count.
+	var showMenuBarExtra: Bool {
+		get { defaults.bool(forKey: ShowMenuBarExtraKey) }
+		set { set(newValue, forKey: ShowMenuBarExtraKey) }
 	}
 	
 	/// The date of the last completed update check.

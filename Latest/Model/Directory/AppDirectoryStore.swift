@@ -12,11 +12,17 @@ import Foundation
 class AppDirectoryStore {
 	
 	typealias UpdateHandler = () -> Void
-	private let observer: NSKeyValueObservation?
+	private let defaults: UserDefaults
+	private let customPathsObserver: NSKeyValueObservation?
+	private let disabledPathsObserver: NSKeyValueObservation?
 
 	/// Initializes the store with the given update handler.
-	init(updateHandler: @escaping UpdateHandler) {
-		observer = UserDefaults.standard.observe(\.directoryPaths, changeHandler: { _, _ in
+	init(defaults: UserDefaults = .standard, updateHandler: @escaping UpdateHandler) {
+		self.defaults = defaults
+		customPathsObserver = defaults.observe(\.directoryPaths, changeHandler: { _, _ in
+			updateHandler()
+		})
+		disabledPathsObserver = defaults.observe(\.disabledDirectoryPaths, changeHandler: { _, _ in
 			updateHandler()
 		})
 	}
@@ -24,13 +30,18 @@ class AppDirectoryStore {
 	
 	// MARK: - URLs
 	
-	/// The URLs stored in this object.
-	var URLs: [URL] {
+	/// All configured directory URLs (both enabled and disabled), for display in Settings.
+	var allURLs: [URL] {
 		Self.defaultURLs + customURLs
 	}
 	
-	/// Set of URLs that will always be checked.
-	private static let defaultURLs: [URL] = {
+	/// The active (enabled) URLs to be scanned for applications.
+	var URLs: [URL] {
+		allURLs.filter { isEnabled($0) }
+	}
+	
+	/// Set of default application directory URLs (`/Applications`, `~/Applications`).
+	static let defaultURLs: [URL] = {
 		let fileManager = FileManager.default
 		let urls = [FileManager.SearchPathDomainMask.localDomainMask, .userDomainMask].flatMap { (domainMask) -> [URL] in
 			return fileManager.urls(for: .applicationDirectory, in: domainMask)
@@ -44,7 +55,7 @@ class AppDirectoryStore {
 	/// User-definable URLs.
 	private var customURLs: [URL] {
 		get {
-			guard let paths = UserDefaults.standard.directoryPaths else { return [] }
+			guard let paths = defaults.directoryPaths else { return [] }
 			
 			return paths.map { path in
 				URL(filePath: path, directoryHint: .isDirectory, relativeTo: nil)
@@ -52,25 +63,53 @@ class AppDirectoryStore {
 		}
 		
 		set {
-			UserDefaults.standard.directoryPaths = newValue.map { $0.relativePath }
+			defaults.directoryPaths = newValue.map { $0.relativePath }
+		}
+	}
+	
+	/// Paths of directories that have been unchecked/disabled by the user.
+	private var disabledPaths: Set<String> {
+		get {
+			Set(defaults.disabledDirectoryPaths ?? [])
+		}
+		set {
+			defaults.disabledDirectoryPaths = Array(newValue).sorted()
 		}
 	}
 			
 
 	// MARK: - Actions
 	
+	/// Whether scanning is enabled for the given directory URL.
+	func isEnabled(_ url: URL) -> Bool {
+		!disabledPaths.contains(url.standardizedFileURL.path)
+	}
+	
+	/// Enables or disables scanning for the given directory URL.
+	func setEnabled(_ enabled: Bool, for url: URL) {
+		var current = disabledPaths
+		let key = url.standardizedFileURL.path
+		if enabled {
+			current.remove(key)
+		} else {
+			current.insert(key)
+		}
+		disabledPaths = current
+	}
+	
 	/// Adds the given URL to the store.
 	///
 	/// This method does nothing if the URL already exists.
 	func add(_ url: URL) {
 		// Ignore adding the same URL multiple times
-		guard !URLs.contains(url) else { return }
+		guard !allURLs.contains(url) else { return }
 		customURLs.append(url)
 	}
 	
 	/// Removes the custom URL, if set.
 	func remove(_ url: URL) {
 		customURLs.removeAll(where: { $0 == url })
+		setEnabled(true, for: url)
 	}
 	
 	/// Whether the URL can be removed from the store.
@@ -86,12 +125,23 @@ class AppDirectoryStore {
 
 extension UserDefaults {
 	private static let directoryPathsKey = "directoryPaths"
+	private static let disabledDirectoryPathsKey = "disabledDirectoryPaths"
+	
 	@objc dynamic var directoryPaths: [String]? {
 		get {
 			stringArray(forKey: Self.directoryPathsKey)
 		}
 		set {
 			setValue(newValue, forKey: Self.directoryPathsKey)
+		}
+	}
+	
+	@objc dynamic var disabledDirectoryPaths: [String]? {
+		get {
+			stringArray(forKey: Self.disabledDirectoryPathsKey)
+		}
+		set {
+			setValue(newValue, forKey: Self.disabledDirectoryPathsKey)
 		}
 	}
 }
