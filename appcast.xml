@@ -3,10 +3,10 @@
     <channel>
         <title>Past Due</title>
         <item>
-            <title>Version 1.0.1</title>
-            <pubDate>Tue, 20 Oct 2026 22:19:08 +0000</pubDate>
-            <sparkle:version>1363</sparkle:version>
-            <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+            <title>Version 1.1.0</title>
+            <pubDate>Tue, 27 Oct 2026 16:50:11 +0000</pubDate>
+            <sparkle:version>1365</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
                 <h2>Past Due 1.0.0</h2>
@@ -18,7 +18,7 @@
                     <li>Fixes for launch crashes, NSTableView row reuse crashes, DisplayLink sleep/wake crashes, and recursive FSEvents folder monitoring</li>
                 </ul>
             ]]></description>
-            <enclosure url="https://github.com/michaelstonis/Past-Due/releases/download/v1.0.1/Past-Due-1.0.1.dmg" sparkle:edSignature="1dy9+6TORJYdCbgKZSuWhl1gKx0HLmhSbdYbg3lmQKCAyES04N8n4wrDF/kFkCGEWIWppUewRLqmmG9mLnJFCw==" length="5485481" type="application/octet-stream"/>
+            <enclosure url="https://github.com/michaelstonis/Past-Due/releases/download/v1.1.0/Past-Due-1.1.0.dmg" sparkle:edSignature="pEme6phGeF5cb6FgolBy4JkcLk/vREBLANbdbyD/uXDwiu9Swp2Ztu1Jq4zKl5cNDurZ18WvCwY9yLP5dUVxCg==" length="4438229" type="application/octet-stream"/>
         </item>
     </channel>
 </rss>
