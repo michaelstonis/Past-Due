@@ -249,7 +249,8 @@ class UpdateRepository {
 				
 				// Store in cache
 				if let cacheURL = urlType.cacheURL {
-					try? data.write(to: cacheURL)
+					try? FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+					try? data.write(to: cacheURL, options: .atomic)
 					UserDefaults.standard.setValue(Date.timeIntervalSinceReferenceDate, forKey: urlType.userDefaultsKey)
 				}
 			}
@@ -260,25 +261,33 @@ class UpdateRepository {
 	
 	/// Parses the given repository data and finishes loading.
 	private func parse(_ repositoryData: Data) {
+		let parsedEntries: [Entry]
 		do {
 			let entries = try JSONDecoder().decode([FailableDecodable<Entry>].self, from: repositoryData)
 				.compactMap { $0.base }
 		
 			// Filter out any entries without application name
-			self.entries = entries.filter { !$0.names.isEmpty }
+			parsedEntries = entries.filter { !$0.names.isEmpty }
 		} catch {
-			self.entries = []
+			parsedEntries = []
+		}
+		queue.sync {
+			self.entries = parsedEntries
 		}
 	}
 	
 	private func loadUnsupportedApps(from data: Data) {
+		let identifiers: Set<String>
 		if let propertyList = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String] {
-			unsupportedBundleIdentifiers = Set(propertyList)
+			identifiers = Set(propertyList)
 		} else if let fallbackData = RemoteURL.unsupportedApps.fallbackData,
 				  let propertyList = (try? PropertyListSerialization.propertyList(from: fallbackData, format: nil)) as? [String] {
-			unsupportedBundleIdentifiers = Set(propertyList)
+			identifiers = Set(propertyList)
 		} else {
-			unsupportedBundleIdentifiers = []
+			identifiers = []
+		}
+		queue.sync {
+			self.unsupportedBundleIdentifiers = identifiers
 		}
 	}
 

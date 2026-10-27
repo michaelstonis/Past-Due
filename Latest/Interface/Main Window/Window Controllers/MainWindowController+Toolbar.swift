@@ -36,6 +36,9 @@ extension MainWindowController: NSToolbarDelegate {
 		switch itemIdentifier {
 		case .progressIndicatorItem:
 			item.view = progressIndicator
+			item.isBordered = false
+			item.isHidden = !isRunningUpdateCheck
+			progressIndicatorToolbarItem = item
 		case .checkForUpdatesActionItem:
 			item.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
 			item.toolTip = NSLocalizedString("CheckForUpdatesToolbarItemToolTip", comment: "Tool tip of a toolbar button that checks for updates")

@@ -14,6 +14,9 @@ protocol AppProviding {
 	/// Returns a list of apps with available updates that can be updated from within Latest.
 	var updatableApps: [App] { get }
 
+	/// Returns the apps with updates available matching the given condition.
+	func availableUpdates(where condition: (App) -> Bool) -> [App]
+
 	/// Returns the number of apps with updates available.
 	func countOfAvailableUpdates(where condition: (App) -> Bool) -> Int
 	
@@ -91,11 +94,16 @@ class AppDataStore: AppProviding {
 		}
 	}
 		
+	/// Returns the apps with updates available matching the given condition.
+	func availableUpdates(where condition: (App) -> Bool) -> [App] {
+		updateQueue.sync {
+			return self.apps.filter({ $0.updateAvailable && !$0.isIgnored && condition($0) })
+		}
+	}
+
 	/// The cached count of apps with updates available
 	func countOfAvailableUpdates(where condition: (App) -> Bool) -> Int {
-		updateQueue.sync {
-			return self.apps.filter({ $0.updateAvailable && !$0.isIgnored && condition($0) }).count
-		}
+		return availableUpdates(where: condition).count
 	}
 	
 	/// Updates the store with the given set of app bundles.

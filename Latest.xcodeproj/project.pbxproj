@@ -96,6 +96,10 @@
 		50FEB8892B1D2402006FB75D /* AppDataStoreLifecycleTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */; };
 		50FEB88B2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */; };
 		50FEB88D2B1D2402006FB75D /* SparkleArchitectureTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB88C2B1D2402006FB75D /* SparkleArchitectureTest.swift */; };
+		50FEB88F2B1D2402006FB75D /* BackgroundCheckSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB88E2B1D2402006FB75D /* BackgroundCheckSettings.swift */; };
+		50FEB8912B1D2402006FB75D /* UpdateNotificationPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8902B1D2402006FB75D /* UpdateNotificationPlanner.swift */; };
+		50FEB8932B1D2402006FB75D /* BackgroundUpdateScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8922B1D2402006FB75D /* BackgroundUpdateScheduler.swift */; };
+		50FEB8952B1D2402006FB75D /* BackgroundUpdateCheckTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FEB8942B1D2402006FB75D /* BackgroundUpdateCheckTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -398,6 +402,10 @@
 		50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataStoreLifecycleTest.swift; sourceTree = "<group>"; };
 		50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreCheckerOperationTest.swift; sourceTree = "<group>"; };
 		50FEB88C2B1D2402006FB75D /* SparkleArchitectureTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleArchitectureTest.swift; sourceTree = "<group>"; };
+		50FEB88E2B1D2402006FB75D /* BackgroundCheckSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundCheckSettings.swift; sourceTree = "<group>"; };
+		50FEB8902B1D2402006FB75D /* UpdateNotificationPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateNotificationPlanner.swift; sourceTree = "<group>"; };
+		50FEB8922B1D2402006FB75D /* BackgroundUpdateScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundUpdateScheduler.swift; sourceTree = "<group>"; };
+		50FEB8942B1D2402006FB75D /* BackgroundUpdateCheckTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundUpdateCheckTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -687,9 +695,20 @@
 				5039DE8322CA39630088B39B /* Updater */,
 				509512231FF36306003D2D7F /* Update Checker Extensions */,
 				50D6EF5D2814618C002D7006 /* Sparkle */,
+				50FEB8962B1D2402006FB75D /* Background Checks */,
 				507375552789AA7C00F371D8 /* Utilities */,
 			);
 			path = Model;
+			sourceTree = "<group>";
+		};
+		50FEB8962B1D2402006FB75D /* Background Checks */ = {
+			isa = PBXGroup;
+			children = (
+				50FEB88E2B1D2402006FB75D /* BackgroundCheckSettings.swift */,
+				50FEB8902B1D2402006FB75D /* UpdateNotificationPlanner.swift */,
+				50FEB8922B1D2402006FB75D /* BackgroundUpdateScheduler.swift */,
+			);
+			path = "Background Checks";
 			sourceTree = "<group>";
 		};
 		509512231FF36306003D2D7F /* Update Checker Extensions */ = {
@@ -764,6 +783,7 @@
 				50FEB8882B1D2402006FB75D /* AppDataStoreLifecycleTest.swift */,
 				50FEB88A2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift */,
 				50FEB88C2B1D2402006FB75D /* SparkleArchitectureTest.swift */,
+				50FEB8942B1D2402006FB75D /* BackgroundUpdateCheckTest.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -1140,6 +1160,9 @@
 				50A8D2B327D2B063004DBA05 /* ReleaseNotesProvider.swift in Sources */,
 				509C4ABC2AD1FFCC00E9C2E1 /* FailableDecodable.swift in Sources */,
 				50FEB8832B1D2402006FB75D /* HomebrewUpdateOperation.swift in Sources */,
+				50FEB88F2B1D2402006FB75D /* BackgroundCheckSettings.swift in Sources */,
+				50FEB8912B1D2402006FB75D /* UpdateNotificationPlanner.swift in Sources */,
+				50FEB8932B1D2402006FB75D /* BackgroundUpdateScheduler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1166,6 +1189,7 @@
 				50FEB8892B1D2402006FB75D /* AppDataStoreLifecycleTest.swift in Sources */,
 				50FEB88B2B1D2402006FB75D /* AppStoreCheckerOperationTest.swift in Sources */,
 				50FEB88D2B1D2402006FB75D /* SparkleArchitectureTest.swift in Sources */,
+				50FEB8952B1D2402006FB75D /* BackgroundUpdateCheckTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

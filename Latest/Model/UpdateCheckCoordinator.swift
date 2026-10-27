@@ -123,6 +123,7 @@ class UpdateCheckCoordinator {
 		
 		// Inform delegate of update check
 		DispatchQueue.main.async {
+			self.activeCheckCount += 1
 			self.progressDelegate?.updateChecker(self, didStartCheckingApps: operations.count)
 		}
 		
@@ -131,9 +132,23 @@ class UpdateCheckCoordinator {
 			
 		DispatchQueue.main.async {
 			// Update Checks finished
+			self.activeCheckCount = max(0, self.activeCheckCount - 1)
 			self.progressDelegate?.updateCheckerDidFinishCheckingForUpdates(self)
+			NotificationCenter.default.post(name: Self.didFinishCheckingNotification, object: self)
 		}
 	}
+	
+	/// The number of update check passes currently running. Only accessed on the main thread.
+	private var activeCheckCount = 0
+	
+	/// Whether an update check is currently running. Must be accessed on the main thread.
+	var isRunning: Bool {
+		dispatchPrecondition(condition: .onQueue(.main))
+		return activeCheckCount > 0
+	}
+	
+	/// Posted on the main thread whenever an update check pass finished.
+	static let didFinishCheckingNotification = Notification.Name("UpdateCheckCoordinatorDidFinishChecking")
     
 	/// Callback to notify that an app has been updated.
 	private func didCheck(_ bundle: App.Bundle, _ update: Result<App.Update, Error>?) {

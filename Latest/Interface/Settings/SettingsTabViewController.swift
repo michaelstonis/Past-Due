@@ -66,8 +66,13 @@ class SettingsTabViewController: NSTabViewController {
 		(tabViewItem?.viewController as? SettingsTabItemViewController)?.prepareForAnimation()
 
 		// Cache the size of the tab item
-		if let tabViewItem = tabViewItem, let size = tabViewItem.view?.frame.size {
-			tabViewSizes[tabViewItem] = size
+		if let tabViewItem = tabViewItem, let view = tabViewItem.view {
+			view.layoutSubtreeIfNeeded()
+			let fitting = view.fittingSize
+			tabViewSizes[tabViewItem] = NSSize(
+				width: max(view.frame.size.width, fitting.width),
+				height: max(view.frame.size.height, fitting.height)
+			)
 		}
 	}
 	
