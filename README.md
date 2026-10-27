@@ -30,11 +30,10 @@
 
 ### Homebrew Cask
 
-You can install **Past Due** via Homebrew using the repository's built-in tap:
+You can install **Past Due** via Homebrew in a single command:
 
 ```bash
-brew tap michaelstonis/past-due https://github.com/michaelstonis/Past-Due
-brew install --cask past-due
+brew install --cask michaelstonis/tap/past-due
 ```
 
 To upgrade later:
