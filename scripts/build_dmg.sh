@@ -16,6 +16,7 @@ DMG_STAGE_DIR="${WORK_DIR}/dmg-stage"
 DERIVED_DATA_DIR="${WORK_DIR}/DerivedData"
 DEFAULT_ENTITLEMENTS_FILE="${ROOT_DIR}/Latest/Resources/Latest.entitlements"
 APPCAST_FILE="${ROOT_DIR}/appcast.xml"
+CASK_FILE="${ROOT_DIR}/Casks/past-due.rb"
 SIGNING_ENV_FILE="${ROOT_DIR}/.signing.env"
 SPARKLE_VERSION="2.10.0"
 SPARKLE_TOOLS_DIR="${ROOT_DIR}/.build/sparkle-tools/${SPARKLE_VERSION}"
@@ -703,6 +704,23 @@ DMG_SHA256="$(shasum -a 256 "${FINAL_DMG}" | awk '{print $1}')"
 DMG_SHA_FILE="${FINAL_DMG}.sha256"
 printf '%s  %s\n' "${DMG_SHA256}" "$(basename "${FINAL_DMG}")" > "${DMG_SHA_FILE}"
 
+if [[ -f "${CASK_FILE}" ]]; then
+  log "Updating Homebrew Cask formula ${CASK_FILE}"
+  python3 - "${CASK_FILE}" "${APP_VERSION}" "${DMG_SHA256}" <<'PY'
+import re, sys
+
+cask_path, ver, sha = sys.argv[1:]
+with open(cask_path, "r", encoding="utf-8") as f:
+    content = f.read()
+
+content = re.sub(r'version\s+"[^"]*"', f'version "{ver}"', content, count=1)
+content = re.sub(r'sha256\s+"[^"]*"', f'sha256 "{sha}"', content, count=1)
+
+with open(cask_path, "w", encoding="utf-8") as f:
+    f.write(content)
+PY
+fi
+
 if [[ "${UPDATE_APPCAST}" == "1" && -f "${APPCAST_FILE}" ]]; then
   log "Signing DMG with Sparkle EdDSA key and updating appcast.xml"
   ensure_sparkle_sign_update
@@ -873,7 +891,7 @@ write_manifest "${MANIFEST_FILE}" "$(basename "${FINAL_DMG}")" "${DMG_SHA256}" "
 
 if [[ "${PUBLISH_RELEASE}" == "1" ]]; then
   log "Publishing v${APP_VERSION} (${APP_BUILD}) to GitHub"
-  git -C "${ROOT_DIR}" add "${PBXPROJ_FILE}" "${SOURCE_INFO_PLIST}" "${APPCAST_FILE}" "${CHANGELOG_FILE}"
+  git -C "${ROOT_DIR}" add "${PBXPROJ_FILE}" "${SOURCE_INFO_PLIST}" "${APPCAST_FILE}" "${CHANGELOG_FILE}" "${CASK_FILE}"
   if ! git -C "${ROOT_DIR}" diff --cached --quiet; then
     git -C "${ROOT_DIR}" commit -m "Release Past Due v${APP_VERSION} (${APP_BUILD})"
   fi
