@@ -3,6 +3,72 @@
     <channel>
         <title>Past Due</title>
         <item>
+            <title>Version 1.2.2</title>
+            <pubDate>Tue, 27 Oct 2026 19:13:28 +0000</pubDate>
+            <sparkle:version>1371</sparkle:version>
+            <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <h2>Past Due 1.2.2</h2>
+                <h4>Bug Fixes:</h4>
+                <ul>
+                    <li>Improve version heading typography, spacing, and live reload refresh.</li>
+                </ul>
+                <h2>Past Due 1.2.1</h2>
+                <h4>Bug Fixes:</h4>
+                <ul>
+                    <li>Fixed double bullets appearing in bulleted lists within the Release Notes view on modern macOS (TextKit 2).</li>
+                    <li>Fixed Sparkle <code>appcast.xml</code> and GitHub Releases so release notes are automatically generated and displayed for every version.</li>
+                </ul>
+                <h2>Past Due 1.2.0</h2>
+                <h4>New and Improved:</h4>
+                <ul>
+                    <li><strong>Command Line Interface (<code>past-due</code>)</strong>: Added a headless CLI for listing and installing macOS app updates directly from the terminal (<code>past-due list</code>, <code>past-due list --all</code>, <code>past-due list --json</code>, <code>past-due update [&lt;app&gt; ...]</code>, <code>past-due update --all</code>) (#17 / upstream #13).</li>
+                    <li><strong>One-Click CLI Installation</strong>: Added a <strong>Command Line: Install &#x27;past-due&#x27; Command…</strong> button in <strong>Settings → General</strong> to symlink <code>/usr/local/bin/past-due</code>.</li>
+                </ul>
+                <h2>Past Due 1.1.0</h2>
+                <h4>New and Improved:</h4>
+                <ul>
+                    <li><strong>Scheduled Background Update Checks &amp; Notifications</strong>: Past Due can now check for updates automatically in the background (hourly, every 6 hours, every 12 hours, or daily) and post a native macOS notification when new app updates are discovered (#15 / upstream #162).</li>
+                    <li><strong>Open at Login</strong>: Added an <strong>Open Past Due at login</strong> option in <strong>Settings → General</strong> using <code>SMAppService</code>.</li>
+                </ul>
+                <h4>Bug Fixes:</h4>
+                <ul>
+                    <li>Enabled <strong>Include apps with limited support</strong> by default on fresh installs so Homebrew Cask updates outside Caskroom are discovered out of the box.</li>
+                    <li>Improved the toolbar update-check progress indicator on macOS 15 and macOS 26 so it uses a clean borderless spinner and collapses its toolbar space when idle.</li>
+                </ul>
+                <h2>Past Due 1.0.1</h2>
+                <h4>Bug Fixes:</h4>
+                <ul>
+                    <li><strong>Sparkle Architecture Verification</strong>: Verify that a Sparkle appcast item supports the Mac&#x27;s CPU architecture (<code>arm64</code> vs. <code>x86_64</code>) before reporting or installing an update, preventing Intel-only builds from overwriting Universal or Apple Silicon apps (#18 / upstream #377).</li>
+                </ul>
+                <h2>Past Due 1.0.0</h2>
+                <p>First release of <strong>Past Due</strong>, a community-maintained continuation of <a href="https://max.codes">Max Langer</a>&#x27;s <a href="https://github.com/mangerlahn/Latest"><strong>Latest</strong></a>, which is no longer actively maintained upstream.</p>
+                <h4>Highlights &amp; Upstream <code>0.12-beta</code> Integration:</h4>
+                <ul>
+                    <li>Incorporates Max Langer&#x27;s unreleased <code>0.12-beta</code> (<code>develop</code>) work, including the privileged background helper (<code>PastDueUpdateInstaller</code>) for Mac App Store updates on macOS 15.7+ and macOS 26+, macOS Tahoe Liquid Glass UI refinements, and updated localizations.</li>
+                    <li>Raises minimum deployment target to <strong>macOS 15.0 (Sequoia)</strong> and upgrades <strong>Sparkle</strong> to <code>2.10.0</code>.</li>
+                    <li><strong>Direct Homebrew Cask Updates</strong>: Apps installed via Homebrew Cask can now be updated directly within Past Due using <code>brew upgrade --cask</code> (#9 / upstream PR #607).</li>
+                    <li><strong>Improved Homebrew Bundle-ID Matching</strong>: Matches apps against Homebrew Casks by bundle identifier and plausibility rules to eliminate false-positive updates (#10 / upstream PR #606).</li>
+                    <li><strong>Localized Mac App Store Release Notes</strong>: Fetches App Store metadata using your preferred storefront language when available (#12 / upstream PR #568).</li>
+                </ul>
+                <h4>Stability &amp; Bug Fixes:</h4>
+                <ul>
+                    <li>Fixed a launch crash caused by empty <code>osVersion</code> strings or malformed entries in the Homebrew Cask JSON catalog (#1 / upstream #579, PR #584).</li>
+                    <li>Fixed an <code>NSTableView</code> exception (<code>RowView cannot be inserted twice</code>) during rapid app list updates (#2 / upstream #588).</li>
+                    <li>Replaced force-unwrapped <code>PropertyListSerialization</code> decoding when loading excluded app identifiers (#3 / upstream #572).</li>
+                    <li>Replaced deprecated <code>CVDisplayLink</code> with <code>CADisplayLink</code> and a fallback timer to prevent crashes when waking from display sleep (#4 / upstream #592).</li>
+                    <li>Fixed <code>SparkleUpdateOperation</code> progress throttling, thread safety, and timer lifecycle leaks (#5 / upstream #601).</li>
+                    <li>Fixed a retain cycle in <code>AppDataStore</code> observer closures (#6 / upstream PR #605).</li>
+                    <li>Replaced non-recursive <code>DispatchSource</code> folder watching with recursive <code>FSEvents</code> monitoring and balanced <code>DispatchGroup</code> calls in <code>BundleCollector</code> (#7 / upstream #316, PR #565).</li>
+                    <li>Fixed asymmetric build-number comparison in <code>Version</code> that caused false-positive updates when build numbers differed in format from marketing versions (#8 / upstream #549).</li>
+                    <li>Fixed Sparkle <code>SUFeedURL</code> lookup when app bundle paths contain spaces or non-ASCII characters (#11 / upstream PR #569).</li>
+                    <li>Added deterministic path tie-breaker sorting for duplicate app bundles (#13 / upstream #507).</li>
+                </ul>
+            ]]></description>
+            <enclosure url="https://github.com/michaelstonis/Past-Due/releases/download/v1.2.2/Past-Due-1.2.2.dmg" sparkle:edSignature="uDVDVAqr4fKr9TlBwukbm6GJuWo2XTGplc5HqnjcSNLNOOxkU0Uxwi+NNBkdpkd4MsyIO+XVE7aWpBLPYfkzAw==" length="5684519" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Version 1.2.1</title>
             <pubDate>Tue, 27 Oct 2026 17:24:42 +0000</pubDate>
             <sparkle:version>1369</sparkle:version>

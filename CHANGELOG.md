@@ -1,3 +1,7 @@
+# 1.2.2
+#### Bug Fixes:
+- Improve version heading typography, spacing, and live reload refresh.
+
 # 1.2.1
 #### Bug Fixes:
 - Fixed double bullets appearing in bulleted lists within the Release Notes view on modern macOS (TextKit 2).
