@@ -327,6 +327,10 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
         }
         
 		if self.selectedApp?.identifier == app.identifier && index == self.tableView.selectedRow {
+			if self.selectedApp !== app {
+				self.selectedApp = app
+				self.releaseNotesViewController?.display(releaseNotesFor: app)
+			}
 			return
 		}
 		

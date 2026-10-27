@@ -92,6 +92,7 @@ class UpdateCheckCoordinator {
 	
 	/// Initiate the update check, if not already running.
 	func run() {
+		URLCache.shared.removeAllCachedResponses()
 		self.progressDelegate?.updateCheckerDidStartScanningForApps(self)
 
 		if self.waitForInitialCheck {
