@@ -47,7 +47,7 @@ class ReleaseNotesTextViewController: NSViewController {
      - parameter attributedString: The string to be formatted
      - returns: The formatted string
      */
-    private func format(_ attributedString: NSAttributedString) -> NSAttributedString {
+    func format(_ attributedString: NSAttributedString) -> NSAttributedString {
         let string = NSMutableAttributedString(attributedString: attributedString)
         let textRange = NSMakeRange(0, attributedString.length)
         let defaultFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
@@ -75,6 +75,18 @@ class ReleaseNotesTextViewController: NSViewController {
 			if let font = NSFont(descriptor: fontDescriptor, size: defaultFont.pointSize) {
 				string.addAttribute(.font, value: font, range: range)
 			}
+        }
+        
+        // Strip NSTextList descriptors from paragraph styles when the HTML importer has already
+        // inserted literal list markers (e.g. "\t•\t"), preventing TextKit 2 from drawing a second bullet.
+        attributedString.enumerateAttribute(.paragraphStyle, in: textRange, options: []) { (styleObject, range, _) in
+            guard let style = styleObject as? NSParagraphStyle,
+                  !style.textLists.isEmpty,
+                  let mutableStyle = style.mutableCopy() as? NSMutableParagraphStyle else {
+                return
+            }
+            mutableStyle.textLists = []
+            string.addAttribute(.paragraphStyle, value: mutableStyle, range: range)
         }
         
         return string

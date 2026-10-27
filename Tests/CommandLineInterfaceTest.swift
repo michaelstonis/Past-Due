@@ -87,4 +87,21 @@ class CommandLineInterfaceTest: XCTestCase {
 		XCTAssertEqual(decoded, [entry])
 	}
 
+	func testReleaseNotesFormattingStripsDuplicateTextLists() throws {
+		let html = "<ul><li>First bullet</li><li>Second bullet</li></ul>"
+		let data = try XCTUnwrap(html.data(using: .utf16))
+		let raw = try XCTUnwrap(NSAttributedString(html: data, documentAttributes: nil))
+
+		let controller = ReleaseNotesTextViewController()
+		let formatted = controller.format(raw)
+
+		XCTAssertTrue(formatted.string.contains("•\tFirst bullet"))
+		formatted.enumerateAttribute(.paragraphStyle, in: NSRange(location: 0, length: formatted.length)) { value, _, _ in
+			if let style = value as? NSParagraphStyle {
+				XCTAssertTrue(style.textLists.isEmpty, "Paragraph style should not retain NSTextList markers when literal bullets are present")
+				XCTAssertEqual(style.headIndent, 36.0)
+			}
+		}
+	}
+
 }

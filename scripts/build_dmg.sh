@@ -322,17 +322,69 @@ with open(path, "w", encoding="utf-8") as f:
 PY
     plist_set "${src_plist}" CFBundleVersion "${target_build}"
 
-    if [[ -f "${changelog}" ]] && ! grep -q "^## Version ${target_marketing}" "${changelog}"; then
-      python3 - "${changelog}" "${target_marketing}" <<'PY'
-import sys
-path, ver = sys.argv[1:]
+    if [[ -f "${changelog}" ]] && ! grep -Eq "^# (Version )?${target_marketing}(\b| )" "${changelog}"; then
+      python3 - "${changelog}" "${target_marketing}" "${current_marketing}" "${ROOT_DIR}" <<'PY'
+import re, subprocess, sys
+
+path, target_ver, prev_ver, root_dir = sys.argv[1:]
 with open(path, "r", encoding="utf-8") as f:
     text = f.read()
-header = f"# Changelog\n\n## Version {ver}\n- Maintenance and stability improvements.\n"
-if text.startswith("# Changelog"):
-    text = text.replace("# Changelog\n", header, 1)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+
+rev_range = f"v{prev_ver}..HEAD"
+try:
+    out = subprocess.check_output(
+        ["git", "-C", root_dir, "log", rev_range, "--no-merges", "--pretty=format:%s"],
+        text=True,
+        stderr=subprocess.DEVNULL,
+    )
+    subjects = [s.strip() for s in out.splitlines() if s.strip()]
+except Exception:
+    subjects = []
+
+features = []
+fixes = []
+other = []
+
+for s in subjects:
+    if s.startswith("chore(release):") or "[skip ci]" in s:
+        continue
+    m = re.match(r"^(feat|fix|perf|refactor|docs|chore)(?:\([^)]+\))?!?:\s*(.+)$", s)
+    if m:
+        kind, body = m.group(1), m.group(2)
+        body = body[0].upper() + body[1:] if body else body
+        if not body.endswith("."):
+            body += "."
+        if kind == "feat":
+            features.append(f"- {body}")
+        elif kind == "fix":
+            fixes.append(f"- {body}")
+        else:
+            other.append(f"- {body}")
+    else:
+        line = s[0].upper() + s[1:] if s else s
+        if line and not line.endswith("."):
+            line += "."
+        other.append(f"- {line}")
+
+lines = [f"# {target_ver}"]
+if features:
+    lines.append("#### New and Improved:")
+    lines.extend(features)
+if fixes:
+    if features:
+        lines.append("")
+    lines.append("#### Bug Fixes:")
+    lines.extend(fixes)
+if other:
+    if features or fixes:
+        lines.append("")
+    lines.extend(other)
+if not (features or fixes or other):
+    lines.append("- Maintenance and stability improvements.")
+
+section = "\n".join(lines) + "\n\n"
+with open(path, "w", encoding="utf-8") as f:
+    f.write(section + text)
 PY
     fi
   fi
@@ -665,23 +717,105 @@ if [[ "${UPDATE_APPCAST}" == "1" && -f "${APPCAST_FILE}" ]]; then
     PUB_DATE="$(LC_ALL=C date -u +"%a, %d %b %Y %H:%M:%S +0000")"
     DOWNLOAD_URL="https://github.com/michaelstonis/Past-Due/releases/download/v${APP_VERSION}/$(basename "${FINAL_DMG}")"
 
-    python3 - "${APPCAST_FILE}" "${APP_VERSION}" "${APP_BUILD}" "${PUB_DATE}" "${DOWNLOAD_URL}" "${SPARKLE_ED_SIG}" "${DMG_LENGTH}" <<'PY'
-import re, sys
+    python3 - "${APPCAST_FILE}" "${ROOT_DIR}/${CHANGELOG_FILE}" "${APP_VERSION}" "${APP_BUILD}" "${PUB_DATE}" "${DOWNLOAD_URL}" "${SPARKLE_ED_SIG}" "${DMG_LENGTH}" <<'PY'
+import html, re, sys
 
-appcast_path, short_ver, build_ver, pub_date, url, ed_sig, length = sys.argv[1:]
+appcast_path, changelog_path, short_ver, build_ver, pub_date, url, ed_sig, length = sys.argv[1:]
+
+def md_inline_to_html(text: str) -> str:
+    escaped = html.escape(text)
+    escaped = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', escaped)
+    escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", escaped)
+    escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    return escaped
+
+def parse_changelog_sections(md_text: str):
+    sections = []
+    current_ver = None
+    current_lines = []
+    for raw_line in md_text.splitlines():
+        m = re.match(r"^#\s+([0-9][0-9A-Za-z.\-]*)(?:\s+\(([^)]+)\))?\s*$", raw_line)
+        if m:
+            if current_ver is not None:
+                sections.append((current_ver, current_lines))
+            current_ver = m.group(1)
+            current_lines = []
+        elif current_ver is not None:
+            current_lines.append(raw_line)
+    if current_ver is not None:
+        sections.append((current_ver, current_lines))
+    return sections
+
+def render_section_html(ver: str, lines: list[str]) -> str:
+    out = [f"<h2>Past Due {html.escape(ver)}</h2>"]
+    in_list = False
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("[") and "]:" in line:
+            continue
+        if line.startswith("#### "):
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            heading = md_inline_to_html(line[5:].strip())
+            out.append(f"<h4>{heading}</h4>")
+        elif line.startswith("- "):
+            if not in_list:
+                out.append("<ul>")
+                in_list = True
+            out.append(f"    <li>{md_inline_to_html(line[2:].strip())}</li>")
+        else:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            out.append(f"<p>{md_inline_to_html(line)}</p>")
+    if in_list:
+        out.append("</ul>")
+    return "\n                ".join(out)
+
+with open(changelog_path, "r", encoding="utf-8") as f:
+    changelog_md = f.read()
+
+sections = parse_changelog_sections(changelog_md)
+# Include all Past Due 1.x+ sections in cumulative release notes (newest first)
+past_due_sections = [(v, lns) for (v, lns) in sections if not v.startswith("0.")]
+if not past_due_sections and sections:
+    past_due_sections = [sections[0]]
+
+description_html = "\n                ".join(render_section_html(v, lns) for v, lns in past_due_sections)
+
+new_item = f"""        <item>
+            <title>Version {short_ver}</title>
+            <pubDate>{pub_date}</pubDate>
+            <sparkle:version>{build_ver}</sparkle:version>
+            <sparkle:shortVersionString>{short_ver}</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                {description_html}
+            ]]></description>
+            <enclosure url="{url}" sparkle:edSignature="{ed_sig}" length="{length}" type="application/octet-stream"/>
+        </item>"""
+
 with open(appcast_path, "r", encoding="utf-8") as f:
     content = f.read()
 
-content = re.sub(r"<title>(?:Version )?[0-9][^<]*</title>", f"<title>Version {short_ver}</title>", content, count=1)
-content = re.sub(r"<pubDate>[^<]*</pubDate>", f"<pubDate>{pub_date}</pubDate>", content, count=1)
-content = re.sub(r"<sparkle:version>[^<]*</sparkle:version>", f"<sparkle:version>{build_ver}</sparkle:version>", content, count=1)
-content = re.sub(r"<sparkle:shortVersionString>[^<]*</sparkle:shortVersionString>", f"<sparkle:shortVersionString>{short_ver}</sparkle:shortVersionString>", content, count=1)
-content = re.sub(
-    r"<enclosure[^>]*/>",
-    f'<enclosure url="{url}" sparkle:edSignature="{ed_sig}" length="{length}" type="application/octet-stream"/>',
-    content,
-    count=1,
+item_pattern = re.compile(
+    r"^\s*<item>\s*<title>(?:Version\s+)?" + re.escape(short_ver) + r"</title>.*?</item>",
+    re.DOTALL | re.MULTILINE,
 )
+
+if item_pattern.search(content):
+    content = item_pattern.sub(new_item, content, count=1)
+else:
+    content = re.sub(
+        r"(<title>Past Due</title>\n)",
+        r"\1" + new_item + "\n",
+        content,
+        count=1,
+    )
 
 with open(appcast_path, "w", encoding="utf-8") as f:
     f.write(content)
@@ -691,6 +825,48 @@ PY
     echo "Warning: Sparkle sign_update did not return a signature; appcast.xml was not modified." >&2
   fi
 fi
+
+RELEASE_NOTES_FILE="${DIST_DIR}/RELEASE_NOTES.md"
+python3 - "${ROOT_DIR}/${CHANGELOG_FILE}" "${APP_VERSION}" "${RELEASE_NOTES_FILE}" <<'PY'
+import re, sys
+
+changelog_path, ver, out_path = sys.argv[1:]
+with open(changelog_path, "r", encoding="utf-8") as f:
+    text = f.read()
+
+sections = []
+current_ver = None
+current_lines = []
+for raw_line in text.splitlines():
+    m = re.match(r"^#\s+([0-9][0-9A-Za-z.\-]*)(?:\s+\(([^)]+)\))?\s*$", raw_line)
+    if m:
+        if current_ver is not None:
+            sections.append((current_ver, current_lines))
+        current_ver = m.group(1)
+        current_lines = []
+    elif current_ver is not None:
+        current_lines.append(raw_line)
+if current_ver is not None:
+    sections.append((current_ver, current_lines))
+
+body_lines = []
+prev_ver = None
+for idx, (v, lns) in enumerate(sections):
+    if v == ver:
+        body_lines = lns
+        if idx + 1 < len(sections):
+            prev_ver = sections[idx + 1][0]
+        break
+
+body = "\n".join(body_lines).strip()
+if not body:
+    body = f"Release Past Due {ver}."
+if prev_ver and not prev_ver.startswith("0."):
+    body += f"\n\n**Full Changelog**: https://github.com/michaelstonis/Past-Due/compare/v{prev_ver}...v{ver}"
+
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(body + "\n")
+PY
 
 MANIFEST_FILE="${DIST_DIR}/${ARTIFACT_BASENAME}.build-manifest.json"
 write_manifest "${MANIFEST_FILE}" "$(basename "${FINAL_DMG}")" "${DMG_SHA256}" "${SPARKLE_ED_SIG}"

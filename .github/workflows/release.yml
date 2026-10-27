@@ -166,8 +166,9 @@ jobs:
         with:
           tag_name: v${{ steps.build.outputs.app_version }}
           name: Past Due ${{ steps.build.outputs.app_version }}
+          body_path: dist/RELEASE_NOTES.md
           files: |
             dist/*.dmg
             dist/*.sha256
             dist/*.build-manifest.json
-          generate_release_notes: true
+          generate_release_notes: false

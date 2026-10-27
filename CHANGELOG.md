@@ -1,3 +1,26 @@
+# 1.2.1
+#### Bug Fixes:
+- Fixed double bullets appearing in bulleted lists within the Release Notes view on modern macOS (TextKit 2).
+- Fixed Sparkle `appcast.xml` and GitHub Releases so release notes are automatically generated and displayed for every version.
+
+# 1.2.0
+#### New and Improved:
+- **Command Line Interface (`past-due`)**: Added a headless CLI for listing and installing macOS app updates directly from the terminal (`past-due list`, `past-due list --all`, `past-due list --json`, `past-due update [<app> ...]`, `past-due update --all`) (#17 / upstream #13).
+- **One-Click CLI Installation**: Added a **Command Line: Install 'past-due' Command…** button in **Settings → General** to symlink `/usr/local/bin/past-due`.
+
+# 1.1.0
+#### New and Improved:
+- **Scheduled Background Update Checks & Notifications**: Past Due can now check for updates automatically in the background (hourly, every 6 hours, every 12 hours, or daily) and post a native macOS notification when new app updates are discovered (#15 / upstream #162).
+- **Open at Login**: Added an **Open Past Due at login** option in **Settings → General** using `SMAppService`.
+
+#### Bug Fixes:
+- Enabled **Include apps with limited support** by default on fresh installs so Homebrew Cask updates outside Caskroom are discovered out of the box.
+- Improved the toolbar update-check progress indicator on macOS 15 and macOS 26 so it uses a clean borderless spinner and collapses its toolbar space when idle.
+
+# 1.0.1
+#### Bug Fixes:
+- **Sparkle Architecture Verification**: Verify that a Sparkle appcast item supports the Mac's CPU architecture (`arm64` vs. `x86_64`) before reporting or installing an update, preventing Intel-only builds from overwriting Universal or Apple Silicon apps (#18 / upstream #377).
+
 # 1.0.0 (Past Due)
 First release of **Past Due**, a community-maintained continuation of [Max Langer](https://max.codes)'s [**Latest**](https://github.com/mangerlahn/Latest), which is no longer actively maintained upstream.
 
