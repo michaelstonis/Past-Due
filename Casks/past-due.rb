@@ -13,7 +13,7 @@ cask "past-due" do
   end
 
   auto_updates true
-  depends_on macos: ">= :sequoia"
+  depends_on macos: :sequoia
 
   app "Past Due.app"
   binary "#{appdir}/Past Due.app/Contents/MacOS/Past Due", target: "past-due"
