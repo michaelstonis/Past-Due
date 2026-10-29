@@ -20,24 +20,33 @@ class App {
 	/// Whether the app is ignored.
 	let isIgnored: Bool
 	
+	/// Optional specific remote version that the user chose to skip until a newer version is released.
+	let skippedVersion: Version?
+	
 	
 	// MARK: - Initialization
 	
 	/// Initializes the app with the given parameters.
-	init(bundle: App.Bundle, update: Result<Update, Error>?, isIgnored: Bool) {
+	init(bundle: App.Bundle, update: Result<Update, Error>?, isIgnored: Bool, skippedVersion: Version? = nil) {
 		self.bundle = bundle
 		self.updateResult = Self.sanitize(update: update, for: bundle)
 		self.isIgnored = isIgnored
+		self.skippedVersion = skippedVersion
 	}
 	
 	/// Returns a new app object with an updated bundle.
 	func with(bundle: Bundle) -> App {
-		return App(bundle: bundle, update: self.updateResult, isIgnored: self.isIgnored)
+		return App(bundle: bundle, update: self.updateResult, isIgnored: self.isIgnored, skippedVersion: self.skippedVersion)
 	}
 	
 	/// Returns a new app object with an updated ignored state.
 	func with(ignoredState: Bool) -> App {
-		return App(bundle: self.bundle, update: self.updateResult, isIgnored: ignoredState)
+		return App(bundle: self.bundle, update: self.updateResult, isIgnored: ignoredState, skippedVersion: self.skippedVersion)
+	}
+	
+	/// Returns a new app object with an updated skipped version.
+	func with(skippedVersion: Version?) -> App {
+		return App(bundle: self.bundle, update: self.updateResult, isIgnored: self.isIgnored, skippedVersion: skippedVersion)
 	}
 	
 	
@@ -137,9 +146,18 @@ extension App {
 		return self.update?.releaseNotes
 	}
 	
-	/// Whether an update is available for the given app.
+	/// Whether the currently available remote update matches the user's skipped version.
+	var isCurrentUpdateSkipped: Bool {
+		guard let skippedVersion, let remoteVersion = self.update?.remoteVersion, self.update?.updateAvailable == true else {
+			return false
+		}
+		return remoteVersion <= skippedVersion
+	}
+	
+	/// Whether an update is available for the given app (excluding a skipped version).
 	var updateAvailable: Bool {
-		return self.update?.updateAvailable ?? false
+		guard self.update?.updateAvailable == true else { return false }
+		return !isCurrentUpdateSkipped
 	}
 	
 	/// Whether the app is currently being updated.

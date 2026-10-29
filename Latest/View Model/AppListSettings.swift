@@ -24,6 +24,9 @@ struct AppListSettings: Observable {
 		/// Sort alphabetically by app name.
 		case name = 1
 		
+		/// Sort by update support level (Full Support, Limited Support, Unsupported).
+		case supportState = 2
+		
 		/// A user-displayable text of the given sort option.
 		var displayName: String {
 			switch self {
@@ -31,6 +34,8 @@ struct AppListSettings: Observable {
 				return NSLocalizedString("DateSortOption", comment: "Update date sorting option. Displayed in menu with title: 'Sort By' -> 'Date'")
 			case .name:
 				return NSLocalizedString("NameSortOption", comment: "Sorting option to list by app names alphabetically. Displayed in menu with title: 'Sort By' -> 'Name'")
+			case .supportState:
+				return NSLocalizedString("SupportSortOption", value: "Support Status", comment: "Sorting option to group by support status. Displayed in menu with title: 'Sort By' -> 'Support Status'")
 			}
 		}
 	}

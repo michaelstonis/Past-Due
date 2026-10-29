@@ -35,8 +35,9 @@ class UpdateRepository {
 	
 	/// Creates a repository from the given entries without fetching anything. Used for testing.
 	init(entries: [Entry]) {
-		self.entries = entries
-		self.entriesByIdentifier = Self.index(entries)
+		let validEntries = entries.filter { !$0.names.isEmpty && $0.hasConcreteVersion }
+		self.entries = validEntries
+		self.entriesByIdentifier = Self.index(validEntries)
 		self.unsupportedBundleIdentifiers = []
 		self.pendingRequests = nil
 	}
@@ -133,6 +134,7 @@ class UpdateRepository {
 		// Strategy: Find all entries that point to the given app name. If only one entry comes up, return that. Otherwise, try to match bundle identifiers to narrow it down.
 		let name = bundle.fileURL.lastPathComponent
 		var possibleEntries = entries.filter { entry in
+			guard isChannelCompatible(entry, with: bundle) else { return false }
 			return entry.names.contains { n in
 				return n.caseInsensitiveCompare(name) == .orderedSame
 			}
@@ -144,12 +146,31 @@ class UpdateRepository {
 		}
 		
 		// Match bundle identifier
-		possibleEntries = possibleEntries.filter { entry in
-			entry.bundleIdentifiers.contains(bundle.bundleIdentifier)
+		let idMatchedEntries = possibleEntries.filter { entry in
+			entry.bundleIdentifiers.contains { $0.caseInsensitiveCompare(bundle.bundleIdentifier) == .orderedSame }
+		}
+		if idMatchedEntries.count == 1 {
+			return idMatchedEntries.first
+		}
+		
+		// Prefer the base stable cask over variants when all candidates share a base prefix (e.g. "zoom" over "zoom-for-it-admins")
+		let candidatePool = idMatchedEntries.isEmpty ? possibleEntries.filter({ isPlausible($0, for: bundle) }) : idMatchedEntries
+		if let base = candidatePool.min(by: { $0.token.count < $1.token.count }),
+		   candidatePool.allSatisfy({ $0.token == base.token || $0.token.hasPrefix(base.token + "-") || $0.token.hasPrefix(base.token + "@") }) {
+			return base
 		}
 		
 		// Only return an entry if we fixed the disambiguation
 		return (possibleEntries.count == 1 ? possibleEntries.first : fallbackEntry(for: bundle))
+	}
+	
+	/// Returns `true` if a cask's release channel (`@beta`, `@nightly`, `-preview`, etc.) is compatible with the local app bundle.
+	private func isChannelCompatible(_ entry: Entry, with bundle: App.Bundle) -> Bool {
+		guard let channel = entry.channelTag else { return true }
+		let bundleName = bundle.fileURL.deletingPathExtension().lastPathComponent.lowercased()
+		let displayName = bundle.name.lowercased()
+		let identifier = bundle.bundleIdentifier.lowercased()
+		return bundleName.contains(channel) || displayName.contains(channel) || identifier.contains(channel)
 	}
 	
 	/// Whether a cask that matched by app name is plausibly the same product as the bundle.
@@ -193,7 +214,7 @@ class UpdateRepository {
 		}
 		
 		let candidates = (entriesByIdentifier[identifier] ?? []).filter { entry in
-			resembles(entry.token) || entry.displayNames.contains(where: resembles)
+			isChannelCompatible(entry, with: bundle) && (resembles(entry.token) || entry.displayNames.contains(where: resembles))
 		}
 		guard candidates.count > 1 else { return candidates.first }
 		
@@ -266,8 +287,8 @@ class UpdateRepository {
 			let entries = try JSONDecoder().decode([FailableDecodable<Entry>].self, from: repositoryData)
 				.compactMap { $0.base }
 		
-			// Filter out any entries without application name
-			parsedEntries = entries.filter { !$0.names.isEmpty }
+			// Filter out any entries without application name or concrete version (e.g. `version :latest`)
+			parsedEntries = entries.filter { !$0.names.isEmpty && $0.hasConcreteVersion }
 		} catch {
 			parsedEntries = []
 		}

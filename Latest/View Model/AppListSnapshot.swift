@@ -87,6 +87,17 @@ struct AppListSnapshot {
 				if lower1 != lower2 {
 					return lower1 < lower2
 				}
+			case .supportState:
+				let rank1 = Self.supportRank(for: app1)
+				let rank2 = Self.supportRank(for: app2)
+				if rank1 != rank2 {
+					return rank1 < rank2
+				}
+				let lower1 = app1.name.lowercased()
+				let lower2 = app2.name.lowercased()
+				if lower1 != lower2 {
+					return lower1 < lower2
+				}
 			}
 			return app1.fileURL.path < app2.fileURL.path
 		})
@@ -141,6 +152,18 @@ struct AppListSnapshot {
 	
 	
 	// MARK: - Section Builder
+	
+	/// Ordering rank for `.supportState` sorting:
+	/// 0 = Full built-in support (Sparkle, Mac App Store, or Caskroom-managed Homebrew)
+	/// 1 = Limited support (Homebrew version tracking without in-app updater)
+	/// 2 = Unsupported
+	static func supportRank(for app: App) -> Int {
+		guard app.supported else { return 2 }
+		if app.usesBuiltInUpdater || app.source == .sparkle || app.source == .appStore {
+			return 0
+		}
+		return 1
+	}
 	
 	private static func updatableAppsSection(withCount numberOfApps: Int) -> Section {
 		let title = NSLocalizedString("AvailableUpdatesSection", comment: "Table Section Header for available updates")
@@ -215,5 +238,125 @@ extension AppListSnapshot {
 			hasher.combine(title)
 		}
 		
+	}
+}
+
+// MARK: - Installed App Inventory Exporter
+
+/// Formats the discovered app inventory into JSON, Markdown, or CSV for export.
+enum AppInventoryExporter {
+	
+	enum Format: String, CaseIterable {
+		case json
+		case markdown
+		case csv
+		
+		var fileExtension: String {
+			switch self {
+			case .json: return "json"
+			case .markdown: return "md"
+			case .csv: return "csv"
+			}
+		}
+		
+		static func from(pathExtension: String) -> Format {
+			switch pathExtension.lowercased() {
+			case "md", "markdown": return .markdown
+			case "csv": return .csv
+			default: return .json
+			}
+		}
+	}
+	
+	struct ExportedAppItem: Codable, Equatable {
+		let name: String
+		let bundleIdentifier: String
+		let currentVersion: String
+		let availableVersion: String?
+		let updateAvailable: Bool
+		let source: String
+		let supportStatus: String
+		let path: String
+	}
+	
+	static func items(from apps: [App]) -> [ExportedAppItem] {
+		let sorted = apps.sorted { a, b in
+			let lower1 = a.name.lowercased()
+			let lower2 = b.name.lowercased()
+			if lower1 != lower2 { return lower1 < lower2 }
+			return a.fileURL.path < b.fileURL.path
+		}
+		return sorted.map { app in
+			let currentVersion = app.version.versionNumber ?? app.version.buildNumber ?? "Unknown"
+			let availableVersion = app.updateAvailable ? (app.remoteVersion?.versionNumber ?? app.remoteVersion?.buildNumber) : nil
+			let supportStatus: String
+			switch AppListSnapshot.supportRank(for: app) {
+			case 0: supportStatus = "Full"
+			case 1: supportStatus = "Limited"
+			default: supportStatus = "Unsupported"
+			}
+			return ExportedAppItem(
+				name: app.name,
+				bundleIdentifier: app.bundleIdentifier,
+				currentVersion: currentVersion,
+				availableVersion: availableVersion,
+				updateAvailable: app.updateAvailable,
+				source: app.source.rawValue,
+				supportStatus: supportStatus,
+				path: app.fileURL.path
+			)
+		}
+	}
+	
+	static func export(apps: [App], format: Format) -> String {
+		let records = items(from: apps)
+		switch format {
+		case .json:
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+			guard let data = try? encoder.encode(records), let string = String(data: data, encoding: .utf8) else {
+				return "[]"
+			}
+			return string
+		case .markdown:
+			var lines = [
+				"# Installed Applications",
+				"",
+				"| Name | Version | Available | Source | Support | Bundle ID | Path |",
+				"| :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+			]
+			for item in records {
+				let available = item.availableVersion ?? "—"
+				lines.append("| \(escapeMarkdown(item.name)) | `\(escapeMarkdown(item.currentVersion))` | \(escapeMarkdown(available)) | \(escapeMarkdown(item.source)) | \(item.supportStatus) | `\(escapeMarkdown(item.bundleIdentifier))` | `\(escapeMarkdown(item.path))` |")
+			}
+			return lines.joined(separator: "\n") + "\n"
+		case .csv:
+			var lines = ["Name,Bundle Identifier,Current Version,Available Version,Update Available,Source,Support Status,Path"]
+			for item in records {
+				let row = [
+					escapeCSV(item.name),
+					escapeCSV(item.bundleIdentifier),
+					escapeCSV(item.currentVersion),
+					escapeCSV(item.availableVersion ?? ""),
+					item.updateAvailable ? "true" : "false",
+					escapeCSV(item.source),
+					escapeCSV(item.supportStatus),
+					escapeCSV(item.path)
+				].joined(separator: ",")
+				lines.append(row)
+			}
+			return lines.joined(separator: "\n") + "\n"
+		}
+	}
+	
+	private static func escapeMarkdown(_ value: String) -> String {
+		value.replacingOccurrences(of: "|", with: "\\|")
+	}
+	
+	private static func escapeCSV(_ value: String) -> String {
+		if value.contains(",") || value.contains("\"") || value.contains("\n") {
+			return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+		}
+		return value
 	}
 }

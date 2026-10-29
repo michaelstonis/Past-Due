@@ -15,6 +15,9 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 	
 	var id = UUID()
 	
+	private let snapshotQueue = DispatchQueue(label: "com.halfbuttonpress.PastDue.snapshot", qos: .userInitiated)
+	private var snapshotGeneration: UInt64 = 0
+	
     /// The array holding the apps that have an update available.
 	var snapshot: AppListSnapshot = AppListSnapshot(withApps: [], filterQuery: nil) {
 		didSet {
@@ -75,9 +78,19 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		
 		AppListSettings.shared.add(self, handler: self.updateSnapshot)
         
-		UpdateCheckCoordinator.shared.appProvider.addObserver(self) { newValue in
-			self.scheduleTableViewUpdate(with: AppListSnapshot(withApps: newValue, filterQuery: self.snapshot.filterQuery), animated: true)
-			self.updateTitleAndBatch()
+		UpdateCheckCoordinator.shared.appProvider.addObserver(self) { [weak self] newValue in
+			guard let self else { return }
+			self.snapshotGeneration &+= 1
+			let generation = self.snapshotGeneration
+			let query = self.snapshot.filterQuery
+			self.snapshotQueue.async { [weak self] in
+				let builtSnapshot = AppListSnapshot(withApps: newValue, filterQuery: query)
+				DispatchQueue.main.async {
+					guard let self, self.snapshotGeneration == generation else { return }
+					self.scheduleTableViewUpdate(with: builtSnapshot, animated: true)
+					self.updateTitleAndBatch()
+				}
+			}
 		}
 		
 		self.updatesLabel.isHidden = true
@@ -365,6 +378,16 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		self.setIgnored(false, forAppAt: self.rowIndex(forMenuItem: sender))
 	}
 	
+	@IBAction func skipVersion(_ sender: NSMenuItem?) {
+		guard let app = self.app(at: self.rowIndex(forMenuItem: sender)), let remoteVersion = app.remoteVersion else { return }
+		UpdateCheckCoordinator.shared.appProvider.setSkippedVersion(remoteVersion, for: app)
+	}
+	
+	@IBAction func unskipVersion(_ sender: NSMenuItem?) {
+		guard let app = self.app(at: self.rowIndex(forMenuItem: sender)) else { return }
+		UpdateCheckCoordinator.shared.appProvider.setSkippedVersion(nil, for: app)
+	}
+	
 	/// Opens the selected app
 	@IBAction func openApp(_ sender: NSMenuItem?) {
 		self.openApp(at: self.rowIndex(forMenuItem: sender))
@@ -397,6 +420,19 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		case #selector(unignoreApp(_:)):
 			menuItem.isHidden = !app.isIgnored
 			return true
+		case #selector(skipVersion(_:)):
+			let canSkip = app.updateAvailable && !app.isIgnored && app.remoteVersion != nil
+			menuItem.isHidden = !canSkip
+			if let versionText = app.remoteVersion?.versionNumber ?? app.remoteVersion?.buildNumber {
+				menuItem.title = String(format: NSLocalizedString("SkipVersionFormat", value: "Skip Version %@", comment: "Context menu item to skip a specific version until the next update"), versionText)
+			} else {
+				menuItem.title = NSLocalizedString("SkipVersionAction", value: "Skip This Version", comment: "Context menu item to skip the current version")
+			}
+			return canSkip
+		case #selector(unskipVersion(_:)):
+			let isSkipped = app.isCurrentUpdateSkipped
+			menuItem.isHidden = !isSkipped
+			return isSkipped
         default:
             ()
         }
@@ -407,11 +443,35 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     // MARK: Delegate
     
     func menuNeedsUpdate(_ menu: NSMenu) {
+		ensureSkipVersionMenuItems(in: menu)
         let row = self.tableView.clickedRow
         
         guard row != -1, !self.snapshot.isSectionHeader(at: row) else { return }
 		menu.items.forEach({ $0.representedObject = self.snapshot.app(at: row) })
     }
+	
+	private func ensureSkipVersionMenuItems(in menu: NSMenu) {
+		guard !menu.items.contains(where: { $0.action == #selector(skipVersion(_:)) }) else { return }
+		let skipItem = NSMenuItem(
+			title: NSLocalizedString("SkipVersionAction", value: "Skip This Version", comment: "Context menu item to skip the current version"),
+			action: #selector(skipVersion(_:)),
+			keyEquivalent: ""
+		)
+		skipItem.target = self
+		let unskipItem = NSMenuItem(
+			title: NSLocalizedString("UnskipVersionAction", value: "Unskip Version", comment: "Context menu item to restore a skipped update version"),
+			action: #selector(unskipVersion(_:)),
+			keyEquivalent: ""
+		)
+		unskipItem.target = self
+		if let ignoreIndex = menu.items.firstIndex(where: { $0.action == #selector(ignoreApp(_:)) }) {
+			menu.insertItem(unskipItem, at: ignoreIndex)
+			menu.insertItem(skipItem, at: ignoreIndex)
+		} else {
+			menu.addItem(skipItem)
+			menu.addItem(unskipItem)
+		}
+	}
     
 	
 	// MARK: - Search

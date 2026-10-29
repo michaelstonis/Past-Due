@@ -192,6 +192,33 @@ class VersionTest: XCTestCase {
 		self.newer(remote, local)
 	}
 	
+	func testSemVerBuildMetadataIgnoredInComparison() {
+		// Issue #20 / Upstream #596: SemVer build metadata (+...) should be ignored during precedence comparison
+		let v1 = Version(versionNumber: "0.4.19+20260315.abcdef", buildNumber: nil)
+		let v2 = Version(versionNumber: "0.4.19", buildNumber: nil)
+		self.equal(v1, v2)
+		
+		let v3 = Version(versionNumber: "0.4.19+2", buildNumber: nil)
+		let v4 = Version(versionNumber: "0.4.20", buildNumber: nil)
+		self.older(v3, v4)
+	}
+	
+	func testHostileAndOverflowVersionStringsDoNotCrash() {
+		// Issue #20 / Upstream #598: Full-width digits, overflowing 64-bit integers, emoji, and control chars must never fatalError
+		let hostileStrings = [
+			"1.0.99999999999999999999999999999",
+			"１.２.３",
+			"2.0.0-🚀",
+			"1.2.3\u{FFFD}beta",
+			"0.0.1\u{0007}"
+		]
+		for raw in hostileStrings {
+			let v = Version(versionNumber: raw, buildNumber: raw)
+			XCTAssertFalse(v.isEmpty, "Hostile version string \(raw) should not crash or be empty")
+			self.equal(v, v)
+		}
+	}
+	
 	
     // MARK: - Helper Methods
     

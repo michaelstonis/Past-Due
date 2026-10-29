@@ -74,6 +74,7 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 		
 		// Set ourselves as the view menu delegate
 		NSApplication.shared.mainMenu?.item(at: MainMenuItem.view.rawValue)?.submenu?.delegate = self
+		self.installExportMenuItemIfNeeded()
 		
 		UpdateCheckCoordinator.shared.progressDelegate = self
         
@@ -246,6 +247,38 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 	
 	@IBAction func toggleShowIgnoredUpdates(_ sender: NSMenuItem?) {
 		AppListSettings.shared.showIgnoredUpdates.toggle()
+	}
+	
+	@IBAction func exportAppList(_ sender: Any?) {
+		guard let window = self.window else { return }
+		let savePanel = NSSavePanel()
+		savePanel.title = NSLocalizedString("ExportAppListTitle", value: "Export Installed App List", comment: "Save panel title for exporting the installed app list.")
+		savePanel.nameFieldStringValue = "Past-Due-Apps.json"
+		savePanel.canCreateDirectories = true
+		savePanel.isExtensionHidden = false
+		
+		savePanel.beginSheetModal(for: window) { response in
+			guard response == .OK, let url = savePanel.url else { return }
+			let format = AppInventoryExporter.Format.from(pathExtension: url.pathExtension)
+			let apps = UpdateCheckCoordinator.shared.appProvider.allApps
+			let content = AppInventoryExporter.export(apps: apps, format: format)
+			try? content.data(using: .utf8)?.write(to: url, options: .atomic)
+		}
+	}
+	
+	private func installExportMenuItemIfNeeded() {
+		guard let fileMenu = NSApplication.shared.mainMenu?.item(at: MainMenuItem.file.rawValue)?.submenu,
+			  !fileMenu.items.contains(where: { $0.action == #selector(exportAppList(_:)) }) else {
+			return
+		}
+		let exportItem = NSMenuItem(
+			title: NSLocalizedString("ExportAppListMenuItem", value: "Export App List…", comment: "File menu item to export the list of installed apps."),
+			action: #selector(exportAppList(_:)),
+			keyEquivalent: "e"
+		)
+		exportItem.keyEquivalentModifierMask = [.command, .shift]
+		fileMenu.addItem(NSMenuItem.separator())
+		fileMenu.addItem(exportItem)
 	}
 
 	

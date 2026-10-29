@@ -44,8 +44,34 @@ extension App {
 			self.fileURL = fileURL
 			self.source = source
 			
-			let date = try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
-			self.modificationDate = date ?? Date.distantPast
+			self.modificationDate = Self.resolveModificationDate(for: fileURL)
+		}
+		
+		/// Computes the most accurate modification date for an `.app` bundle, accounting for in-place updaters
+		/// (which touch `Contents/Info.plist` without updating the outer `.app` directory mtime) and reproducible
+		/// archives stamped with the 1980-01-01 DOS/ZIP epoch (`1979-12-31` in Western Hemisphere timezones).
+		static func resolveModificationDate(for bundleURL: URL) -> Date {
+			// Ignore dates on or before 1980-01-02 00:00:00 UTC (reproducible build / ZIP epoch)
+			let minimumPlausibleDate = Date(timeIntervalSince1970: 315_619_200)
+			let maximumPlausibleDate = Date().addingTimeInterval(86_400)
+			
+			let bundleValues = try? bundleURL.resourceValues(forKeys: [.contentModificationDateKey, .addedToDirectoryDateKey])
+			let infoPlistURL = bundleURL.appendingPathComponent("Contents/Info.plist", isDirectory: false)
+			let infoPlistValues = try? infoPlistURL.resourceValues(forKeys: [.contentModificationDateKey])
+			
+			let modificationCandidates = [
+				bundleValues?.contentModificationDate,
+				infoPlistValues?.contentModificationDate
+			].compactMap { $0 }.filter { $0 > minimumPlausibleDate && $0 <= maximumPlausibleDate }
+			
+			if let latestModification = modificationCandidates.max() {
+				return latestModification
+			}
+			if let addedDate = bundleValues?.addedToDirectoryDate,
+			   addedDate > minimumPlausibleDate && addedDate <= maximumPlausibleDate {
+				return addedDate
+			}
+			return bundleValues?.contentModificationDate ?? Date.distantPast
 		}
 
 
@@ -81,7 +107,7 @@ extension App {
 			coder.encode(self.version.versionNumber, forKey: "versionNumber")
 			coder.encode(self.version.buildNumber, forKey: "buildNumber")
 			coder.encode(self.name, forKey: "name")
-			coder.encode(self.identifier, forKey: "bundleIdentifier")
+			coder.encode(self.bundleIdentifier, forKey: "bundleIdentifier")
 			coder.encode(self.fileURL, forKey: "fileURL")
 			coder.encode(self.source.rawValue, forKey: "source")
 		}

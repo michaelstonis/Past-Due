@@ -102,6 +102,26 @@ extension UpdateRepository {
 			return VersionParser.parse(combinedVersionNumber: rawVersion)
 		}
 		
+		/// Whether this cask entry defines a concrete version rather than Homebrew's unversioned `latest` token.
+		var hasConcreteVersion: Bool {
+			let trimmed = rawVersion.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+			return !trimmed.isEmpty && trimmed != "latest" && !version.isEmpty
+		}
+		
+		/// Prerelease or alternate channel suffix (`@beta`, `@nightly`, `-preview`, etc.) if this cask is not a default stable cask.
+		var channelTag: String? {
+			let lowerToken = token.lowercased()
+			if let atIndex = lowerToken.firstIndex(of: "@") {
+				return String(lowerToken[lowerToken.index(after: atIndex)...])
+			}
+			for suffix in ["beta", "nightly", "alpha", "preview", "insiders", "dev", "canary", "snapshot"] {
+				if lowerToken.hasSuffix("-\(suffix)") {
+					return suffix
+				}
+			}
+			return nil
+		}
+		
 	}
 
 }

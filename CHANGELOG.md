@@ -1,3 +1,16 @@
+# 1.4.0
+#### New and Improved:
+- **Skip This Version (Ignore Until Next Update)**: Right-click any app with an available update and choose **Skip Version X.Y.Z** to silence that specific version while still receiving notifications when the next version ships (#24 / upstream #49, #419).
+- **Sort by Support Status**: Added **View → Sort By → Support Status** to group full-support, limited-support, and unsupported apps cleanly (#23 / upstream #554, PR #556).
+- **Export Installed App List**: Added **File → Export App List… (`⇧⌘E`)** to export your discovered app inventory in **JSON** (`.json`), **Markdown** (`.md`), or **CSV** (`.csv`) format (#27 / upstream #281).
+- **Auto-Recheck on Network Recovery & Wake**: Past Due now monitors network reachability (`NWPathMonitor`) and system wake events to automatically check for updates once connectivity becomes available (#25 / upstream #32).
+- **Cached Startup & Non-Blocking Refreshes**: Restores the last known app list from cache immediately on launch, moves `AppListSnapshot` generation off the main thread, and warns before adding broad scan roots such as `/` or `$HOME` (#26 / upstream PR #566).
+
+#### Bug Fixes:
+- **Resilient Version Parsing & SemVer Build Metadata**: Removed the `fatalError` fallback in `Version.swift` on overflowing/non-ASCII version strings and stripped SemVer 2.0.0 build metadata (`+...`) before comparing versions to eliminate phantom updates (#20 / upstream PRs #598, #596).
+- **Accurate Update Dates for Self-Updating & Reproducible Builds**: Resolved `App.Bundle.modificationDate` across the outer `.app` bundle, `Contents/Info.plist`, and `.addedToDirectoryDateKey` while ignoring `1980-01-01` (`1979-12-31` local) ZIP epochs (#21 / upstream #591, #468).
+- **Homebrew Channel & Wrapper Filtering**: Prevented prerelease Homebrew casks (`@beta`, `@nightly`, `-preview`, etc.) from matching stable local apps, filtered out unversioned `version :latest` casks, and resolved Electron/Code-OSS product versions (such as Positron IDE) from `product.json` (#22 / upstream #567, #577, #552, #359).
+
 # 1.3.0
 #### New and Improved:
 - **Menu Bar Extra**: Added an optional **Show Past Due in the menu bar** setting in **Settings → General** that displays an `NSStatusItem` with the live available update count, quick access to available updates, and an **Update All** action (#16 / upstream #64).

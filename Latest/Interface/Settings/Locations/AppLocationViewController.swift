@@ -89,15 +89,36 @@ class AppDirectoryViewController: SettingsTabItemViewController, NSTableViewData
 	}
 	
 	private func presentOpenPanel() {
+		guard let window = self.view.window else { return }
 		let panel = NSOpenPanel()
 		panel.canChooseFiles = false
 		panel.canChooseDirectories = true
 		
-		panel.beginSheetModal(for: self.view.window!) { response in
-			guard response == .OK else { return }
-			panel.urls.forEach { url in
+		panel.beginSheetModal(for: window) { [weak self] response in
+			guard let self, response == .OK else { return }
+			for url in panel.urls {
+				if Self.isBroadScanRoot(url) {
+					let alert = NSAlert()
+					alert.alertStyle = .warning
+					alert.messageText = NSLocalizedString("BroadScanDirectoryWarningTitle", value: "Broad Scan Location Selected", comment: "Warning title when a user selects a root or home directory as an app scan location.")
+					alert.informativeText = String(
+						format: NSLocalizedString("BroadScanDirectoryWarningMessage", value: "Scanning \"%@\" recursively may take a long time and trigger permission prompts. Consider choosing a more specific Applications folder instead.", comment: "Warning message when a user selects a broad scan directory."),
+						url.path
+					)
+					alert.addButton(withTitle: NSLocalizedString("AddAnywayAction", value: "Add Anyway", comment: "Button to confirm adding a broad directory."))
+					alert.addButton(withTitle: NSLocalizedString("CancelAction", value: "Cancel", comment: "Cancel button."))
+					if alert.runModal() != .alertFirstButtonReturn {
+						continue
+					}
+				}
 				self.directoryStore.add(url)
 			}
 		}
+	}
+	
+	static func isBroadScanRoot(_ url: URL) -> Bool {
+		let standardized = url.standardizedFileURL.path
+		let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+		return standardized == "/" || standardized == "/Users" || standardized == home || standardized.hasPrefix("/Volumes/") && standardized.split(separator: "/").count <= 2
 	}
 }

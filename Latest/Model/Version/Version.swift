@@ -81,7 +81,8 @@ struct Version : Hashable, Comparable {
 			v2 = rhs.versionNumber
 		}
 		
-		guard let c1 = v1?.components(), let c2 = v2?.components() else {
+		guard let c1 = v1?.strippingBuildMetadata().components(),
+			  let c2 = v2?.strippingBuildMetadata().components() else {
 			return .undefined
 		}
 		
@@ -171,6 +172,14 @@ extension Version: CustomDebugStringConvertible {
 /// An extension helping the version checking
 fileprivate extension String {
 	
+	/// Strips SemVer 2.0.0 build metadata (`+...`) when preceded by a non-empty version prefix.
+	func strippingBuildMetadata() -> String {
+		guard let plusIndex = firstIndex(of: "+"), plusIndex > startIndex else {
+			return self
+		}
+		return String(self[..<plusIndex])
+	}
+	
 	/**
 	 Returns the components of an version number.
 	 Components are grouped by Character type, so "12.3" returns [("12", .number), (".", .separator), ("3", .number)]
@@ -202,8 +211,10 @@ fileprivate extension String {
 				currentAtoms.append(.string(value: string as String))
 			}
 			
-			else {
-				fatalError("Unable to parse version string: \(self)")
+			// Fallback for characters not matched by scanInt, .separators, or .letters
+			// (e.g., overflowing 64-bit integer literals, full-width digits, or symbols)
+			else if let character = scanner.scanCharacter() {
+				currentAtoms.append(.string(value: String(character)))
 			}
 		}
 		

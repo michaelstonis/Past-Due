@@ -35,6 +35,9 @@ protocol AppProviding {
 	/// Sets the ignored state for the given app.
 	func setIgnoredState(_ ignored: Bool, for app: App)
 	
+	/// Skips the current update version for the given app until a newer version is released, or clears the skipped version if `nil`.
+	func setSkippedVersion(_ version: Version?, for app: App)
+	
 }
 
 /// The collection handling app bundles alongside there update representations.
@@ -43,10 +46,31 @@ class AppDataStore: AppProviding {
 	/// The queue on which updates to the collection are being performed.
 	private var updateQueue = DispatchQueue(label: "DataStoreQueue")
 	
+	/// Whether this store persists and restores discovered app bundles across launches.
+	private let persistsCache: Bool
 	
-	init() {
+	private struct CachedBundleRecord: Codable {
+		let versionNumber: String?
+		let buildNumber: String?
+		let name: String
+		let bundleIdentifier: String
+		let filePath: String
+		let source: String
+	}
+	
+	private static var cacheFileURL: URL? {
+		FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+			.appendingPathComponent(Bundle.main.bundleIdentifier ?? "com.halfbuttonpress.PastDue")
+			.appendingPathComponent("CachedAppBundles.json")
+	}
+	
+	init(restoreFromCache: Bool = false) {
+		self.persistsCache = restoreFromCache
 		self.updateScheduler = DispatchSource.makeUserDataAddSource(queue: .global())
 		self.setupScheduler()
+		if restoreFromCache {
+			self.restoreCachedBundles()
+		}
 	}
 
 	
@@ -127,10 +151,69 @@ class AppDataStore: AppProviding {
 					return app.with(bundle: bundle)
 				}
 				
-				return App(bundle: bundle, update: nil, isIgnored: self.isIdentifierIgnored(bundle.bundleIdentifier))
+				return App(
+					bundle: bundle,
+					update: nil,
+					isIgnored: self.isIdentifierIgnored(bundle.bundleIdentifier),
+					skippedVersion: self.skippedVersion(for: bundle.bundleIdentifier)
+				)
 			}))
 			
+			if self.persistsCache, !appBundles.isEmpty {
+				self.saveCachedBundles(appBundles)
+			}
+			
 			return self.apps.subtracting(oldApps)
+		}
+	}
+	
+	private func restoreCachedBundles() {
+		guard let url = Self.cacheFileURL,
+			  let data = try? Data(contentsOf: url),
+			  let records = try? JSONDecoder().decode([CachedBundleRecord].self, from: data) else {
+			return
+		}
+		let restoredBundles: [App.Bundle] = records.compactMap { record in
+			guard let source = App.Source(rawValue: record.source),
+				  FileManager.default.fileExists(atPath: record.filePath) else {
+				return nil
+			}
+			let version = Version(versionNumber: record.versionNumber, buildNumber: record.buildNumber)
+			return App.Bundle(
+				version: version,
+				name: record.name,
+				bundleIdentifier: record.bundleIdentifier,
+				fileURL: URL(fileURLWithPath: record.filePath),
+				source: source
+			)
+		}
+		guard !restoredBundles.isEmpty else { return }
+		self.apps = Set(restoredBundles.map { bundle in
+			App(
+				bundle: bundle,
+				update: nil,
+				isIgnored: self.isIdentifierIgnored(bundle.bundleIdentifier),
+				skippedVersion: self.skippedVersion(for: bundle.bundleIdentifier)
+			)
+		})
+	}
+	
+	private func saveCachedBundles(_ bundles: Set<App.Bundle>) {
+		guard let url = Self.cacheFileURL else { return }
+		let records = bundles.map { bundle in
+			CachedBundleRecord(
+				versionNumber: bundle.version.versionNumber,
+				buildNumber: bundle.version.buildNumber,
+				name: bundle.name,
+				bundleIdentifier: bundle.bundleIdentifier,
+				filePath: bundle.fileURL.path,
+				source: bundle.source.rawValue
+			)
+		}
+		DispatchQueue.global(qos: .utility).async {
+			guard let data = try? JSONEncoder().encode(records) else { return }
+			try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+			try? data.write(to: url, options: .atomic)
 		}
 	}
 	
@@ -141,7 +224,7 @@ class AppDataStore: AppProviding {
 				fatalError("App not in data store")
 			}
 			
-			let app = App(bundle: bundle, update: update, isIgnored: oldApp.isIgnored)
+			let app = App(bundle: bundle, update: update, isIgnored: oldApp.isIgnored, skippedVersion: oldApp.skippedVersion)
 			self.update(app)
 			
 			return app
@@ -188,6 +271,37 @@ class AppDataStore: AppProviding {
 	/// Returns the identifiers of ignored apps.
 	private var ignoredAppIdentifiers: Set<String> {
 		return Set((UserDefaults.standard.array(forKey: Self.IgnoredAppsKey) as? [String]) ?? [])
+	}
+	
+	/// The key for storing per-app skipped versions (`[bundleIdentifier: [versionNumber, buildNumber]]`).
+	private static let SkippedAppVersionsKey = "SkippedAppVersionsKey"
+	
+	private func skippedVersion(for identifier: String) -> Version? {
+		guard let dict = UserDefaults.standard.dictionary(forKey: Self.SkippedAppVersionsKey) as? [String: [String: String]],
+			  let entry = dict[identifier] else {
+			return nil
+		}
+		let versionNumber = entry["versionNumber"]?.isEmpty == false ? entry["versionNumber"] : nil
+		let buildNumber = entry["buildNumber"]?.isEmpty == false ? entry["buildNumber"] : nil
+		let version = Version(versionNumber: versionNumber, buildNumber: buildNumber)
+		return version.isEmpty ? nil : version
+	}
+	
+	func setSkippedVersion(_ version: Version?, for app: App) {
+		var dict = (UserDefaults.standard.dictionary(forKey: Self.SkippedAppVersionsKey) as? [String: [String: String]]) ?? [:]
+		if let version, !version.isEmpty {
+			dict[app.bundleIdentifier] = [
+				"versionNumber": version.versionNumber ?? "",
+				"buildNumber": version.buildNumber ?? ""
+			]
+		} else {
+			dict.removeValue(forKey: app.bundleIdentifier)
+		}
+		UserDefaults.standard.set(dict, forKey: Self.SkippedAppVersionsKey)
+		
+		updateQueue.sync {
+			self.update(app.with(skippedVersion: version))
+		}
 	}
 
 		

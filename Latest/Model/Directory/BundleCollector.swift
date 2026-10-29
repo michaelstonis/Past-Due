@@ -96,7 +96,34 @@ fileprivate extension Bundle {
 	}
 	
 	/// Returns the short version string when working without Spotlight.
+	/// For Code-OSS / Electron derivative apps (such as Positron) that store the engine version in
+	/// `CFBundleShortVersionString` and the actual application version in `Contents/Resources/app/product.json`,
+	/// prefers the product-specific version key when present.
 	var versionNumber: String? {
-		return infoDictionary?["CFBundleShortVersionString"] as? String
+		let plistVersion = infoDictionary?["CFBundleShortVersionString"] as? String
+		if let productVersion = resolveElectronProductVersion(plistVersion: plistVersion) {
+			return productVersion
+		}
+		return plistVersion
+	}
+	
+	private func resolveElectronProductVersion(plistVersion: String?) -> String? {
+		let productJSONURL = bundleURL.appendingPathComponent("Contents/Resources/app/product.json", isDirectory: false)
+		guard let data = try? Data(contentsOf: productJSONURL),
+			  let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+			return nil
+		}
+		
+		// Check for `<appName>Version` (e.g. `positronVersion` in Positron IDE) when `CFBundleShortVersionString`
+		// matches the underlying Code-OSS `"version"` key.
+		if let appName = bundleName?.lowercased().filter({ $0.isLetter || $0.isNumber }), !appName.isEmpty,
+		   let specificVersion = json["\(appName)Version"] as? String, !specificVersion.isEmpty {
+			if let buildNumber = json["\(appName)BuildNumber"] as? String, !buildNumber.isEmpty, !specificVersion.contains(buildNumber) {
+				return "\(specificVersion)-\(buildNumber)"
+			}
+			return specificVersion
+		}
+		
+		return nil
 	}
 }

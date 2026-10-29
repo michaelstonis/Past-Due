@@ -6,7 +6,9 @@
 //  Copyright © 2017 Max Langer. All rights reserved.
 //
 
+import AppKit
 import Foundation
+import Network
 
 /**
  Protocol that defines some methods on reporting the progress of the update checking process.
@@ -52,6 +54,47 @@ class UpdateCheckCoordinator {
 	/// The shared instance of the update checker.
 	static let shared = UpdateCheckCoordinator()
 	
+	private let networkMonitor = NWPathMonitor()
+	private let networkMonitorQueue = DispatchQueue(label: "com.halfbuttonpress.PastDue.networkMonitor", qos: .utility)
+	private var wasNetworkSatisfied: Bool?
+	private var lastCompletedCheckDate: Date?
+	
+	init() {
+		setupConnectivityAndWakeMonitors()
+	}
+	
+	private func setupConnectivityAndWakeMonitors() {
+		networkMonitor.pathUpdateHandler = { [weak self] path in
+			let isSatisfied = (path.status == .satisfied)
+			DispatchQueue.main.async {
+				guard let self else { return }
+				let previouslySatisfied = self.wasNetworkSatisfied
+				self.wasNetworkSatisfied = isSatisfied
+				
+				// If connectivity transitions from offline -> online after initial startup, trigger a check
+				if previouslySatisfied == false, isSatisfied, !self.waitForInitialCheck, !self.isRunning {
+					self.run()
+				}
+			}
+		}
+		networkMonitor.start(queue: networkMonitorQueue)
+		
+		NSWorkspace.shared.notificationCenter.addObserver(
+			forName: NSWorkspace.didWakeNotification,
+			object: nil,
+			queue: .main
+		) { [weak self] _ in
+			guard let self, !self.waitForInitialCheck, !self.isRunning else { return }
+			// Recheck after wake if at least 5 minutes have elapsed since the last check
+			if let lastDate = self.lastCompletedCheckDate, Date().timeIntervalSince(lastDate) < 300 {
+				return
+			}
+			if self.wasNetworkSatisfied != false {
+				self.run()
+			}
+		}
+	}
+	
 	
 	// MARK: - Update Checking
 	
@@ -67,7 +110,8 @@ class UpdateCheckCoordinator {
 			handler: { bundles in
 				// Set new bundles and check for updates
 				let newApps = self.dataStore.set(appBundles: Set(bundles))
-				self.runUpdateCheck(on: newApps.map({ $0.bundle }))
+				let bundlesToCheck = newApps.isEmpty ? bundles : newApps.map({ $0.bundle })
+				self.runUpdateCheck(on: bundlesToCheck)
 			},
 			observationFailureHandler: { url, error in
 				DispatchQueue.main.async {
@@ -78,7 +122,7 @@ class UpdateCheckCoordinator {
 	}()
 	
 	/// The data store updated apps should be passed to
-	private let dataStore = AppDataStore()
+	private let dataStore = AppDataStore(restoreFromCache: true)
 	
 	/// The queue to run update checks on.
 	private let updateOperationQueue: OperationQueue = {
@@ -134,6 +178,7 @@ class UpdateCheckCoordinator {
 		DispatchQueue.main.async {
 			// Update Checks finished
 			self.activeCheckCount = max(0, self.activeCheckCount - 1)
+			self.lastCompletedCheckDate = Date()
 			self.progressDelegate?.updateCheckerDidFinishCheckingForUpdates(self)
 			NotificationCenter.default.post(name: Self.didFinishCheckingNotification, object: self)
 		}
