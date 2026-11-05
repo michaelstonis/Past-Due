@@ -35,6 +35,14 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		return self.snapshot.homebrewEntries
 	}
 	
+	private static let homebrewSectionHeightDefaultsKey = "HomebrewSidebarSectionHeightKey"
+	
+	/// Upper Applications section header controls.
+	private var applicationsHeaderView: NSView?
+	private var applicationsCountLabel: NSTextField?
+	private var applicationsCollapseButton: NSButton?
+	private var isApplicationsSectionCollapsed = false
+	
 	/// Lower sidebar container and table view dedicated to Homebrew-managed Casks and Formulae.
 	private var homebrewContainerView: NSView?
 	private var homebrewTableView: UpdateTableView?
@@ -42,6 +50,13 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 	private var homebrewCollapseButton: NSButton?
 	private var homebrewCollapsedConstraint: NSLayoutConstraint?
 	private var homebrewExpandedHeightConstraint: NSLayoutConstraint?
+	private var homebrewCustomHeightConstraint: NSLayoutConstraint?
+	private var homebrewFillWhenAppsCollapsedConstraint: NSLayoutConstraint?
+	private var homebrewUserHeight: CGFloat? = {
+		let saved = UserDefaults.standard.double(forKey: "HomebrewSidebarSectionHeightKey")
+		return saved >= 90 ? CGFloat(saved) : nil
+	}()
+	private var dragStartHeight: CGFloat = 0
 	private var isHomebrewSectionCollapsed = false
 	        
     /// The detail view controller that shows the release notes
@@ -111,8 +126,6 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		self.updatesLabel.isHidden = true
 		
 		if #available(macOS 26, *) {
-			self.topTableConstraint.constant = 0
-			self.tableView.enclosingScrollView?.contentInsets = .init(top: 78, left: 0, bottom: 0, right: 0)
 			self.tableView.enclosingScrollView?.scrollerInsets = .init(top: 0, left: 0, bottom: 10, right: 0)
 		}
     }
@@ -642,24 +655,83 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		self.selectApp(at: nil)
 	}
 	
-	// MARK: - Lower Homebrew Sidebar Pane
+	// MARK: - Split Sidebar Panes (Upper Applications + Resizable Lower Homebrew)
 	
 	private func setupHomebrewSectionView() {
 		guard let upperScrollView = self.tableView.enclosingScrollView else { return }
 		
+		// 1. Upper "Applications" Header Bar
+		let appsHeader = NSVisualEffectView()
+		appsHeader.material = .sidebar
+		appsHeader.blendingMode = .withinWindow
+		appsHeader.translatesAutoresizingMaskIntoConstraints = false
+		self.view.addSubview(appsHeader)
+		self.applicationsHeaderView = appsHeader
+		
+		let appsTopSeparator = NSBox()
+		appsTopSeparator.boxType = .separator
+		appsTopSeparator.translatesAutoresizingMaskIntoConstraints = false
+		appsHeader.addSubview(appsTopSeparator)
+		
+		let appsDisclosure = NSButton()
+		appsDisclosure.bezelStyle = .disclosure
+		appsDisclosure.setButtonType(.pushOnPushOff)
+		appsDisclosure.title = ""
+		appsDisclosure.state = .on
+		appsDisclosure.target = self
+		appsDisclosure.action = #selector(toggleApplicationsSectionCollapsed(_:))
+		appsDisclosure.translatesAutoresizingMaskIntoConstraints = false
+		appsHeader.addSubview(appsDisclosure)
+		self.applicationsCollapseButton = appsDisclosure
+		
+		let appsIconView = NSImageView()
+		appsIconView.translatesAutoresizingMaskIntoConstraints = false
+		if let symbol = NSImage(systemSymbolName: "square.stack.3d.up.fill", accessibilityDescription: "Applications") {
+			appsIconView.image = symbol
+			appsIconView.contentTintColor = .secondaryLabelColor
+		}
+		appsHeader.addSubview(appsIconView)
+		
+		let appsTitleButton = NSButton(
+			title: NSLocalizedString("ApplicationsSectionHeaderTitle", value: "Applications", comment: "Upper sidebar section title for regular macOS applications"),
+			target: self,
+			action: #selector(toggleApplicationsSectionCollapsed(_:))
+		)
+		appsTitleButton.isBordered = false
+		appsTitleButton.font = .systemFont(ofSize: 12, weight: .semibold)
+		appsTitleButton.contentTintColor = .secondaryLabelColor
+		appsTitleButton.alignment = .left
+		appsTitleButton.translatesAutoresizingMaskIntoConstraints = false
+		appsHeader.addSubview(appsTitleButton)
+		
+		let appsCountLabel = NSTextField(labelWithString: "")
+		appsCountLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+		appsCountLabel.textColor = .secondaryLabelColor
+		appsCountLabel.alignment = .right
+		appsCountLabel.translatesAutoresizingMaskIntoConstraints = false
+		appsHeader.addSubview(appsCountLabel)
+		self.applicationsCountLabel = appsCountLabel
+		
+		let appsBottomSeparator = NSBox()
+		appsBottomSeparator.boxType = .separator
+		appsBottomSeparator.translatesAutoresizingMaskIntoConstraints = false
+		appsHeader.addSubview(appsBottomSeparator)
+		
+		// Deactivate Storyboard top & bottom constraints on upperScrollView so it sits between appsHeader and homebrewContainerView
+		self.topTableConstraint?.isActive = false
+		for constraint in self.view.constraints {
+			if (constraint.firstItem as? NSView === upperScrollView && (constraint.firstAttribute == .bottom || constraint.firstAttribute == .top)) ||
+			   (constraint.secondItem as? NSView === upperScrollView && (constraint.secondAttribute == .bottom || constraint.secondAttribute == .top)) {
+				constraint.isActive = false
+			}
+		}
+		
+		// 2. Lower "Homebrew" Container & Draggable Header Bar
 		let container = NSView()
 		container.translatesAutoresizingMaskIntoConstraints = false
 		container.wantsLayer = true
 		self.view.addSubview(container)
 		self.homebrewContainerView = container
-		
-		// Replace the upper scrollView's bottom constraint to self.view with a constraint to container.topAnchor
-		for constraint in self.view.constraints {
-			if (constraint.firstItem as? NSView === upperScrollView && constraint.firstAttribute == .bottom) ||
-			   (constraint.secondItem as? NSView === upperScrollView && constraint.secondAttribute == .bottom) {
-				constraint.isActive = false
-			}
-		}
 		
 		// Top separator line
 		let separator = NSBox()
@@ -667,11 +739,21 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		separator.translatesAutoresizingMaskIntoConstraints = false
 		container.addSubview(separator)
 		
-		// Header bar
-		let headerView = NSVisualEffectView()
+		// Draggable header bar for resizing the Homebrew section vertically
+		let headerView = ResizableSidebarHeaderView()
 		headerView.material = .sidebar
 		headerView.blendingMode = .withinWindow
 		headerView.translatesAutoresizingMaskIntoConstraints = false
+		headerView.onDragBegan = { [weak self] in
+			guard let self, let container = self.homebrewContainerView else { return }
+			self.dragStartHeight = self.isHomebrewSectionCollapsed ? 31 : container.frame.height
+		}
+		headerView.onDragDelta = { [weak self] deltaY in
+			self?.handleHomebrewHeaderDrag(deltaY: deltaY)
+		}
+		headerView.onClickWithoutDrag = { [weak self] in
+			self?.toggleHomebrewSectionCollapsed(nil)
+		}
 		container.addSubview(headerView)
 		
 		let disclosureButton = NSButton()
@@ -693,10 +775,9 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		}
 		headerView.addSubview(iconView)
 		
-		let titleButton = NSButton(title: NSLocalizedString("HomebrewSectionHeaderTitle", value: "Homebrew", comment: "Lower sidebar section title for Homebrew packages"), target: self, action: #selector(toggleHomebrewSectionCollapsed(_:)))
-		titleButton.isBordered = false
+		let titleButton = NSTextField(labelWithString: NSLocalizedString("HomebrewSectionHeaderTitle", value: "Homebrew", comment: "Lower sidebar section title for Homebrew packages"))
 		titleButton.font = .systemFont(ofSize: 12, weight: .semibold)
-		titleButton.contentTintColor = .secondaryLabelColor
+		titleButton.textColor = .secondaryLabelColor
 		titleButton.alignment = .left
 		titleButton.translatesAutoresizingMaskIntoConstraints = false
 		headerView.addSubview(titleButton)
@@ -755,11 +836,55 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		self.homebrewCollapsedConstraint = collapsedHeight
 		
 		let expandedHeight = container.heightAnchor.constraint(equalTo: self.view.heightAnchor, multiplier: 0.42)
-		expandedHeight.priority = NSLayoutConstraint.Priority(740)
+		expandedHeight.priority = NSLayoutConstraint.Priority(730)
 		self.homebrewExpandedHeightConstraint = expandedHeight
 		
+		let customHeight = container.heightAnchor.constraint(equalToConstant: self.homebrewUserHeight ?? 240)
+		customHeight.priority = NSLayoutConstraint.Priority(745)
+		self.homebrewCustomHeightConstraint = customHeight
+		
+		let fillWhenAppsCollapsed = container.topAnchor.constraint(equalTo: appsHeader.bottomAnchor)
+		fillWhenAppsCollapsed.priority = NSLayoutConstraint.Priority(760)
+		self.homebrewFillWhenAppsCollapsedConstraint = fillWhenAppsCollapsed
+		
+		let upperScrollBottom = upperScrollView.bottomAnchor.constraint(equalTo: container.topAnchor)
+		upperScrollBottom.priority = NSLayoutConstraint.Priority(750)
+		
 		NSLayoutConstraint.activate([
-			upperScrollView.bottomAnchor.constraint(equalTo: container.topAnchor),
+			// Upper Applications Header Bar
+			appsHeader.topAnchor.constraint(equalTo: self.searchField.bottomAnchor, constant: 8),
+			appsHeader.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+			appsHeader.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+			appsHeader.heightAnchor.constraint(equalToConstant: 30),
+			
+			appsTopSeparator.topAnchor.constraint(equalTo: appsHeader.topAnchor),
+			appsTopSeparator.leadingAnchor.constraint(equalTo: appsHeader.leadingAnchor),
+			appsTopSeparator.trailingAnchor.constraint(equalTo: appsHeader.trailingAnchor),
+			
+			appsDisclosure.leadingAnchor.constraint(equalTo: appsHeader.leadingAnchor, constant: 10),
+			appsDisclosure.centerYAnchor.constraint(equalTo: appsHeader.centerYAnchor),
+			
+			appsIconView.leadingAnchor.constraint(equalTo: appsDisclosure.trailingAnchor, constant: 4),
+			appsIconView.centerYAnchor.constraint(equalTo: appsHeader.centerYAnchor),
+			appsIconView.widthAnchor.constraint(equalToConstant: 14),
+			appsIconView.heightAnchor.constraint(equalToConstant: 14),
+			
+			appsTitleButton.leadingAnchor.constraint(equalTo: appsIconView.trailingAnchor, constant: 5),
+			appsTitleButton.centerYAnchor.constraint(equalTo: appsHeader.centerYAnchor),
+			
+			appsCountLabel.leadingAnchor.constraint(greaterThanOrEqualTo: appsTitleButton.trailingAnchor, constant: 8),
+			appsCountLabel.trailingAnchor.constraint(equalTo: appsHeader.trailingAnchor, constant: -14),
+			appsCountLabel.centerYAnchor.constraint(equalTo: appsHeader.centerYAnchor),
+			
+			appsBottomSeparator.bottomAnchor.constraint(equalTo: appsHeader.bottomAnchor),
+			appsBottomSeparator.leadingAnchor.constraint(equalTo: appsHeader.leadingAnchor),
+			appsBottomSeparator.trailingAnchor.constraint(equalTo: appsHeader.trailingAnchor),
+			
+			// Upper ScrollView between Applications Header and Lower Homebrew Container
+			upperScrollView.topAnchor.constraint(equalTo: appsHeader.bottomAnchor),
+			upperScrollBottom,
+			
+			// Lower Homebrew Container
 			container.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
 			container.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
 			container.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
@@ -803,6 +928,22 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 	}
 	
 	private func reloadHomebrewSection() {
+		// Update upper Applications header badge
+		let regUpdates = self.snapshot.regularAvailableUpdateCount
+		let totalRegularApps = self.apps.reduce(0) { count, entry in
+			if case .app = entry { return count + 1 }
+			return count
+		}
+		if regUpdates > 0 {
+			self.applicationsCountLabel?.stringValue = String.localizedStringWithFormat(
+				NSLocalizedString("RegularUpdateCountBadge", value: "%d update(s)", comment: "Badge count in the Applications upper sidebar header"),
+				regUpdates
+			)
+		} else {
+			self.applicationsCountLabel?.stringValue = totalRegularApps > 0 ? "\(totalRegularApps)" : ""
+		}
+		self.tableView.enclosingScrollView?.isHidden = self.isApplicationsSectionCollapsed
+		
 		guard let container = self.homebrewContainerView,
 			  let brewTable = self.homebrewTableView else { return }
 		
@@ -811,6 +952,8 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		let hasHomebrewEntries = !self.homebrewApps.isEmpty
 		if !hasHomebrewEntries {
 			container.isHidden = true
+			self.homebrewFillWhenAppsCollapsedConstraint?.isActive = false
+			self.homebrewCustomHeightConstraint?.isActive = false
 			self.homebrewExpandedHeightConstraint?.isActive = false
 			self.homebrewCollapsedConstraint?.constant = 0
 			self.homebrewCollapsedConstraint?.isActive = true
@@ -833,12 +976,78 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		}
 		
 		if self.isHomebrewSectionCollapsed {
+			self.homebrewFillWhenAppsCollapsedConstraint?.isActive = false
+			self.homebrewCustomHeightConstraint?.isActive = false
 			self.homebrewExpandedHeightConstraint?.isActive = false
 			self.homebrewCollapsedConstraint?.constant = 31
 			self.homebrewCollapsedConstraint?.isActive = true
-		} else {
+		} else if self.isApplicationsSectionCollapsed {
 			self.homebrewCollapsedConstraint?.isActive = false
-			self.homebrewExpandedHeightConstraint?.isActive = true
+			self.homebrewCustomHeightConstraint?.isActive = false
+			self.homebrewExpandedHeightConstraint?.isActive = false
+			self.homebrewFillWhenAppsCollapsedConstraint?.isActive = true
+		} else {
+			self.homebrewFillWhenAppsCollapsedConstraint?.isActive = false
+			self.homebrewCollapsedConstraint?.isActive = false
+			if let userHeight = self.homebrewUserHeight {
+				let maxAllowed = max(120, self.view.bounds.height - 170)
+				let clamped = min(max(userHeight, 95), maxAllowed)
+				self.homebrewExpandedHeightConstraint?.isActive = false
+				self.homebrewCustomHeightConstraint?.constant = clamped
+				self.homebrewCustomHeightConstraint?.isActive = true
+			} else {
+				self.homebrewCustomHeightConstraint?.isActive = false
+				self.homebrewExpandedHeightConstraint?.isActive = true
+			}
+		}
+	}
+	
+	private func handleHomebrewHeaderDrag(deltaY: CGFloat) {
+		let proposedHeight = self.dragStartHeight + deltaY
+		let totalHeight = self.view.bounds.height
+		let appsHeaderBottom: CGFloat = 108 // searchField + Applications header
+		let maxAllowed = max(120, totalHeight - appsHeaderBottom - 80)
+		
+		if self.isApplicationsSectionCollapsed {
+			self.isApplicationsSectionCollapsed = false
+			self.applicationsCollapseButton?.state = .on
+		}
+		
+		if proposedHeight < 55 {
+			// Snap to collapsed when dragged near the bottom
+			if !self.isHomebrewSectionCollapsed {
+				self.isHomebrewSectionCollapsed = true
+				self.homebrewCollapseButton?.state = .off
+				self.reloadHomebrewSection()
+				self.view.layoutSubtreeIfNeeded()
+			}
+			return
+		}
+		
+		if self.isHomebrewSectionCollapsed {
+			self.isHomebrewSectionCollapsed = false
+			self.homebrewCollapseButton?.state = .on
+		}
+		
+		let clampedHeight = min(max(proposedHeight, 95), maxAllowed)
+		self.homebrewUserHeight = clampedHeight
+		UserDefaults.standard.set(Double(clampedHeight), forKey: Self.homebrewSectionHeightDefaultsKey)
+		self.reloadHomebrewSection()
+		self.view.layoutSubtreeIfNeeded()
+	}
+	
+	@objc private func toggleApplicationsSectionCollapsed(_ sender: Any?) {
+		self.isApplicationsSectionCollapsed.toggle()
+		self.applicationsCollapseButton?.state = self.isApplicationsSectionCollapsed ? .off : .on
+		if self.isApplicationsSectionCollapsed && self.isHomebrewSectionCollapsed && !self.homebrewApps.isEmpty {
+			self.isHomebrewSectionCollapsed = false
+			self.homebrewCollapseButton?.state = .on
+		}
+		NSAnimationContext.runAnimationGroup { context in
+			context.duration = 0.2
+			context.allowsImplicitAnimation = true
+			self.reloadHomebrewSection()
+			self.view.layoutSubtreeIfNeeded()
 		}
 	}
 	
@@ -917,4 +1126,74 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		}
 	}
     
+}
+
+/// Sidebar section header view that supports vertical drag-to-resize as well as click-to-toggle-collapse.
+private final class ResizableSidebarHeaderView: NSVisualEffectView {
+	var onDragBegan: (() -> Void)?
+	var onDragDelta: ((CGFloat) -> Void)?
+	var onClickWithoutDrag: (() -> Void)?
+	
+	private var dragStartScreenY: CGFloat = 0
+	private var isDraggingHeader = false
+	
+	override func resetCursorRects() {
+		super.resetCursorRects()
+		// Exclude the leading disclosure button area so the disclosure button keeps the standard arrow cursor
+		let resizeRect = NSRect(x: 28, y: 0, width: max(0, bounds.width - 28), height: bounds.height)
+		addCursorRect(resizeRect, cursor: .resizeUpDown)
+	}
+	
+	override func draw(_ dirtyRect: NSRect) {
+		super.draw(dirtyRect)
+		// Draw a subtle centered grab handle pill near the top edge of the header bar
+		let pillWidth: CGFloat = 28
+		let pillHeight: CGFloat = 3
+		let pillRect = NSRect(
+			x: (bounds.width - pillWidth) / 2.0,
+			y: bounds.height - pillHeight - 2.5,
+			width: pillWidth,
+			height: pillHeight
+		)
+		let path = NSBezierPath(roundedRect: pillRect, xRadius: 1.5, yRadius: 1.5)
+		NSColor.tertiaryLabelColor.withAlphaComponent(0.45).setFill()
+		path.fill()
+	}
+	
+	override func mouseDown(with event: NSEvent) {
+		let pointInWindow = event.locationInWindow
+		if let window = self.window {
+			dragStartScreenY = window.convertPoint(toScreen: pointInWindow).y
+		} else {
+			dragStartScreenY = pointInWindow.y
+		}
+		isDraggingHeader = false
+		onDragBegan?()
+	}
+	
+	override func mouseDragged(with event: NSEvent) {
+		let currentY: CGFloat
+		if let window = self.window {
+			currentY = window.convertPoint(toScreen: event.locationInWindow).y
+		} else {
+			currentY = event.locationInWindow.y
+		}
+		let deltaY = currentY - dragStartScreenY
+		if !isDraggingHeader && abs(deltaY) > 2 {
+			isDraggingHeader = true
+			NSCursor.resizeUpDown.push()
+		}
+		if isDraggingHeader {
+			onDragDelta?(deltaY)
+		}
+	}
+	
+	override func mouseUp(with event: NSEvent) {
+		if isDraggingHeader {
+			NSCursor.pop()
+			isDraggingHeader = false
+		} else {
+			onClickWithoutDrag?()
+		}
+	}
 }

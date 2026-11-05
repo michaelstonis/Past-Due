@@ -24,10 +24,12 @@ struct AppListSnapshot {
 	init(withApps apps: [App], filterQuery: String?) {
 		self.filterQuery = filterQuery
 		self.apps = apps
+		let showExternal = AppListSettings.shared.includeAppsWithLimitedSupport
 		let regularApps = apps.filter { !$0.isManagedByHomebrew }
 		let homebrewApps = AppListSettings.shared.includeHomebrewUpdates ? apps.filter { $0.isManagedByHomebrew } : []
 		self.entries = Self.generateEntries(from: regularApps, filterQuery: filterQuery)
 		self.homebrewEntries = Self.generateEntries(from: homebrewApps, filterQuery: filterQuery)
+		self.regularAvailableUpdateCount = regularApps.filter { $0.updateAvailable && !$0.isIgnored && (showExternal || $0.usesBuiltInUpdater) }.count
 		self.homebrewAvailableUpdateCount = homebrewApps.filter { $0.updateAvailable && !$0.isIgnored }.count
 	}
 	
@@ -46,6 +48,9 @@ struct AppListSnapshot {
 	
 	/// The user-facable, sorted and filtered list of Homebrew-managed apps/formulae and sections for the lower sidebar pane.
 	let homebrewEntries: [Entry]
+	
+	/// Number of available updates in the upper regular Applications section.
+	let regularAvailableUpdateCount: Int
 	
 	/// Number of available updates in the Homebrew section.
 	let homebrewAvailableUpdateCount: Int
