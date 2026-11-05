@@ -1,3 +1,7 @@
+# 1.5.0
+#### New and Improved:
+- Add split Homebrew sidebar pane, CLI formulae, and GitHub release diffs (#28).
+
 # 1.4.0
 #### New and Improved:
 - **Skip This Version (Ignore Until Next Update)**: Right-click any app with an available update and choose **Skip Version X.Y.Z** to silence that specific version while still receiving notifications when the next version ships (#24 / upstream #49, #419).
