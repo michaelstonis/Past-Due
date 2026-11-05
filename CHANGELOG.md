@@ -1,3 +1,7 @@
+# 1.6.0
+#### New and Improved:
+- Add Applications section header and vertically resizable Homebrew pane.
+
 # 1.5.1
 #### Bug Fixes:
 - Ensure all cache-restored apps are checked on startup.
