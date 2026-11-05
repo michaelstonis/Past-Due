@@ -24,7 +24,11 @@ struct AppListSnapshot {
 	init(withApps apps: [App], filterQuery: String?) {
 		self.filterQuery = filterQuery
 		self.apps = apps
-		self.entries = Self.generateEntries(from: apps, filterQuery: filterQuery)
+		let regularApps = apps.filter { !$0.isManagedByHomebrew }
+		let homebrewApps = AppListSettings.shared.includeHomebrewUpdates ? apps.filter { $0.isManagedByHomebrew } : []
+		self.entries = Self.generateEntries(from: regularApps, filterQuery: filterQuery)
+		self.homebrewEntries = Self.generateEntries(from: homebrewApps, filterQuery: filterQuery)
+		self.homebrewAvailableUpdateCount = homebrewApps.filter { $0.updateAvailable && !$0.isIgnored }.count
 	}
 	
 	/// Returns a new snapshot containing an updated filter query.
@@ -37,8 +41,14 @@ struct AppListSnapshot {
 		return AppListSnapshot(withApps: self.apps, filterQuery: self.filterQuery)
 	}
 	
-	/// The user-facable, sorted and filtered list of apps and sections. Observers of the data store will be notified, when this list changes.
+	/// The user-facable, sorted and filtered list of regular (non-Homebrew) apps and sections.
 	let entries: [Entry]
+	
+	/// The user-facable, sorted and filtered list of Homebrew-managed apps/formulae and sections for the lower sidebar pane.
+	let homebrewEntries: [Entry]
+	
+	/// Number of available updates in the Homebrew section.
+	let homebrewAvailableUpdateCount: Int
 	
 	/// Sorts and filters all available apps based on the given filter criteria.
 	private static func generateEntries(from apps: [App], filterQuery: String?) -> [Entry] {
@@ -102,7 +112,7 @@ struct AppListSnapshot {
 			return app1.fileURL.path < app2.fileURL.path
 		})
 		
-		// Build final list. This is a very inefficient solution. Find a better one
+		// Build final list for the given subset of apps (Available Updates, Installed Apps, Ignored Apps)
 		var availableUpdates = filteredApps.filter({ $0.updateAvailable && !$0.isIgnored }).map({ Entry.app($0) })
 		if !availableUpdates.isEmpty {
 			availableUpdates = [.section(Self.updatableAppsSection(withCount: availableUpdates.count))] + availableUpdates
@@ -124,9 +134,11 @@ struct AppListSnapshot {
 
 	// MARK: - Accessors
 	
-	/// Returns the app at the given index, if any.
-	func app(at index: Int) -> App? {
-		if case .app(let app) = self.entries[index] {
+	/// Returns the app at the given index in `entries`, if any.
+	func app(at index: Int, inHomebrewSection: Bool = false) -> App? {
+		let list = inHomebrewSection ? self.homebrewEntries : self.entries
+		guard index >= 0 && index < list.count else { return nil }
+		if case .app(let app) = list[index] {
 			return app
 		}
 		
@@ -137,13 +149,19 @@ struct AppListSnapshot {
 		return self.entries.firstIndex(where: { $0.isSimilar(to: .app(app)) })
 	}
 	
+	func homebrewIndex(of app: App) -> Int? {
+		return self.homebrewEntries.firstIndex(where: { $0.isSimilar(to: .app(app)) })
+	}
+	
 	func contains(_ app: App) -> Bool {
 		return self.apps.contains { $0.identifier == app.identifier }
 	}
 	
 	/// Returns whether there is a section at the given index
-	func isSectionHeader(at index: Int) -> Bool {
-		if case .section(_) = self.entries[index] {
+	func isSectionHeader(at index: Int, inHomebrewSection: Bool = false) -> Bool {
+		let list = inHomebrewSection ? self.homebrewEntries : self.entries
+		guard index >= 0 && index < list.count else { return false }
+		if case .section(_) = list[index] {
 			return true
 		}
 		
@@ -154,20 +172,26 @@ struct AppListSnapshot {
 	// MARK: - Section Builder
 	
 	/// Ordering rank for `.supportState` sorting:
-	/// 0 = Full built-in support (Sparkle, Mac App Store, or Caskroom-managed Homebrew)
+	/// 0 = Full built-in support (Sparkle, Mac App Store, or Caskroom/Formula-managed Homebrew)
 	/// 1 = Limited support (Homebrew version tracking without in-app updater)
 	/// 2 = Unsupported
 	static func supportRank(for app: App) -> Int {
-		guard app.supported else { return 2 }
-		if app.usesBuiltInUpdater || app.source == .sparkle || app.source == .appStore {
-			return 0
+		switch app.supportState {
+		case .full: return 0
+		case .limited: return 1
+		case .none: return 2
 		}
-		return 1
 	}
 	
 	private static func updatableAppsSection(withCount numberOfApps: Int) -> Section {
 		let title = NSLocalizedString("AvailableUpdatesSection", comment: "Table Section Header for available updates")
 		let shortTitle = NSLocalizedString("AvailableSection", comment: "Touch Bar section title for available updates")
+		return Section(title: title, shortTitle: shortTitle, numberOfApps: numberOfApps)
+	}
+	
+	private static func homebrewUpdatableAppsSection(withCount numberOfApps: Int) -> Section {
+		let title = NSLocalizedString("HomebrewUpdatesSection", value: "Homebrew Updates", comment: "Table Section Header for available Homebrew Cask and Formula updates")
+		let shortTitle = NSLocalizedString("HomebrewSection", value: "Homebrew", comment: "Touch Bar section title for Homebrew updates")
 		return Section(title: title, shortTitle: shortTitle, numberOfApps: numberOfApps)
 	}
 	

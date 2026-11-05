@@ -17,9 +17,9 @@ class AppLibrary {
 	let updateHandler: UpdateHandler
 	let observationFailureHandler: ObservationFailureHandler
 	
-	/// A list of all application bundles that are available locally.
+	/// A list of all application bundles (and user-installed Homebrew CLI formulae) that are available locally.
 	var bundles: [App.Bundle] {
-		directories.flatMap { $0.value.bundles}
+		directories.flatMap { $0.value.bundles } + HomebrewUpdateOperation.collectInstalledFormulaBundles()
 	}
 		
 	private var directories = [URL: AppDirectory]()

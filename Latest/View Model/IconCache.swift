@@ -30,11 +30,25 @@ class IconCache {
         }
         
         DispatchQueue.main.async {
-            let icon = NSWorkspace.shared.icon(forFile: app.fileURL.path)
+            let icon: NSImage
+            if app.bundle.isHomebrewFormula {
+                icon = Self.homebrewFormulaIcon()
+            } else {
+                icon = NSWorkspace.shared.icon(forFile: app.fileURL.path)
+            }
             self.cache.setObject(icon, forKey: app)
 
             completion(icon)
         }
+    }
+    
+    /// Returns the native macOS Terminal application icon for Homebrew CLI formulae so it blends naturally with macOS app icons.
+    private static func homebrewFormulaIcon() -> NSImage {
+        let terminalPath = "/System/Applications/Utilities/Terminal.app"
+        if FileManager.default.fileExists(atPath: terminalPath) {
+            return NSWorkspace.shared.icon(forFile: terminalPath)
+        }
+        return NSWorkspace.shared.icon(for: .unixExecutable)
     }
     
 }

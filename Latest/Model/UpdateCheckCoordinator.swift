@@ -148,16 +148,23 @@ class UpdateCheckCoordinator {
 		self.runUpdateCheck(on: self.library.bundles)
 	}
 	
+	/// Rescans local bundles (including Homebrew `Cellar` and `Caskroom`) and re-runs the update check after a Homebrew upgrade completes.
+	func refreshAfterHomebrewUpgrade() {
+		let latestBundles = self.library.bundles
+		_ = self.dataStore.set(appBundles: Set(latestBundles))
+		self.runUpdateCheck(on: latestBundles)
+	}
+	
 	/// Performs the update check on the given bundles.
 	private func runUpdateCheck(on bundles: [App.Bundle]) {
 		let repository = UpdateRepository.newRepository()
-		let operations = bundles.compactMap { bundle in
-			return Self.operation(forChecking: bundle, repository: repository) { result in
-				self.didCheck(bundle, result)
-			}
-		}
-		
 		DispatchQueue.global().async {
+			HomebrewUpdateOperation.refreshOutdatedPackagesCache()
+			let operations = bundles.compactMap { bundle in
+				return Self.operation(forChecking: bundle, repository: repository) { result in
+					self.didCheck(bundle, result)
+				}
+			}
 			self.performUpdateCheck(with: operations)
 		}
 	}
@@ -221,12 +228,19 @@ extension UpdateCheckCoordinator {
 	}
 	
 	/// Returns the update source for the app at the given url.
+	/// Prefers `.homebrew` when the `.app` bundle is installed in Homebrew's `Caskroom` so `brew` state stays in sync.
 	static func source(forAppAt url: URL) -> App.Source? {
+		if HomebrewUpdateOperation.isAppAtURLInCaskroom(url) {
+			return .homebrew
+		}
 		return self.availableOperations.first { $0.canPerformUpdateCheck(forAppAt: url) }?.sourceType
 	}
 	
 	/// Returns the update check operation for the given app bundle.
 	static func operation(forChecking bundle: App.Bundle, repository: UpdateRepository?, completion: @escaping UpdateCheckerOperation.UpdateCheckerCompletionBlock) -> UpdateCheckerOperation? {
+		if bundle.isHomebrewFormula || bundle.source == .homebrew || HomebrewUpdateOperation.isBundleInCaskroom(bundle) {
+			return HomebrewCheckerOperation(with: bundle, repository: repository, completionBlock: completion)
+		}
 		return self.availableOperations.first { $0.sourceType == bundle.source }?.init(with: bundle, repository: repository, completionBlock: completion)
 	}
 	

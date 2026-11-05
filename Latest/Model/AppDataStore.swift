@@ -56,6 +56,7 @@ class AppDataStore: AppProviding {
 		let bundleIdentifier: String
 		let filePath: String
 		let source: String
+		let homebrewFormulaToken: String?
 	}
 	
 	private static var cacheFileURL: URL? {
@@ -184,7 +185,8 @@ class AppDataStore: AppProviding {
 				name: record.name,
 				bundleIdentifier: record.bundleIdentifier,
 				fileURL: URL(fileURLWithPath: record.filePath),
-				source: source
+				source: source,
+				homebrewFormulaToken: record.homebrewFormulaToken
 			)
 		}
 		guard !restoredBundles.isEmpty else { return }
@@ -207,7 +209,8 @@ class AppDataStore: AppProviding {
 				name: bundle.name,
 				bundleIdentifier: bundle.bundleIdentifier,
 				filePath: bundle.fileURL.path,
-				source: bundle.source.rawValue
+				source: bundle.source.rawValue,
+				homebrewFormulaToken: bundle.homebrewFormulaToken
 			)
 		}
 		DispatchQueue.global(qos: .utility).async {

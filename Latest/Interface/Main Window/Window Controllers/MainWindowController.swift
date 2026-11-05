@@ -102,7 +102,8 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
     
     /// Open all apps that have an update available. If apps from the Mac App Store are there as well, open the Mac App Store
     @IBAction func updateAll(_ sender: Any?) {
-		let apps = UpdateCheckCoordinator.shared.appProvider.updatableApps
+		let includeHomebrew = AppListSettings.shared.includeHomebrewUpdates
+		let apps = UpdateCheckCoordinator.shared.appProvider.updatableApps.filter { includeHomebrew || !$0.isManagedByHomebrew }
 		
 		// Check if there are app store updates
 		if apps.contains(where: { $0.bundle.source == .appStore }) {
@@ -167,6 +168,15 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
     }
     
     func menuNeedsUpdate(_ menu: NSMenu) {
+		if let ignoredIndex = menu.items.firstIndex(where: { $0.action == #selector(toggleShowIgnoredUpdates(_:)) }),
+		   !menu.items.contains(where: { $0.action == #selector(toggleShowHomebrewPackages(_:)) }) {
+			let brewItem = NSMenuItem(
+				title: NSLocalizedString("ShowHomebrewPackagesMenuItem", value: "Show Homebrew Packages", comment: "View menu item to show or hide the Homebrew packages section"),
+				action: #selector(toggleShowHomebrewPackages(_:)),
+				keyEquivalent: ""
+			)
+			menu.insertItem(brewItem, at: ignoredIndex + 1)
+		}
         menu.items.forEach { (menuItem) in
 			// Sort By menu constructed dynamically
 			if menuItem.identifier == NSUserInterfaceItemIdentifier(rawValue: "sortByMenu") {
@@ -180,6 +190,8 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
                 menuItem.state = AppListSettings.shared.showInstalledUpdates ? .on : .off
 			case #selector(toggleShowIgnoredUpdates(_:)):
                 menuItem.state = AppListSettings.shared.showIgnoredUpdates ? .on : .off
+			case #selector(toggleShowHomebrewPackages(_:)):
+				menuItem.state = AppListSettings.shared.includeHomebrewUpdates ? .on : .off
             default:
                 ()
             }
@@ -249,6 +261,10 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 		AppListSettings.shared.showIgnoredUpdates.toggle()
 	}
 	
+	@IBAction func toggleShowHomebrewPackages(_ sender: NSMenuItem?) {
+		AppListSettings.shared.includeHomebrewUpdates.toggle()
+	}
+	
 	@IBAction func exportAppList(_ sender: Any?) {
 		guard let window = self.window else { return }
 		let savePanel = NSSavePanel()
@@ -286,7 +302,8 @@ class MainWindowController: NSWindowController, NSMenuItemValidation, NSMenuDele
 	
 	/// Whether there are any updatable apps.
 	private var hasUpdatesAvailable: Bool {
-		!UpdateCheckCoordinator.shared.appProvider.updatableApps.isEmpty
+		let includeHomebrew = AppListSettings.shared.includeHomebrewUpdates
+		return UpdateCheckCoordinator.shared.appProvider.updatableApps.contains { includeHomebrew || !$0.isManagedByHomebrew }
 	}
 	
 	/// Whether an update check is currently running

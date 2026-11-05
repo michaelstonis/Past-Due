@@ -56,13 +56,20 @@ class UpdateRepository {
 	
 	/// Returns update information for the given bundle.
 	func updateInfo(for bundle: App.Bundle, handler: @escaping (_ bundle: App.Bundle, _ version: Version?, _ minimumOSVersion: OperatingSystemVersion?, _ token: String?) -> Void) {
+		updateEntry(for: bundle) { bundle, entry in
+			handler(bundle, entry?.version, entry?.minimumOSVersion, entry?.token)
+		}
+	}
+	
+	/// Returns the full repository `Entry` for the given bundle once the catalog has loaded.
+	func updateEntry(for bundle: App.Bundle, handler: @escaping (_ bundle: App.Bundle, _ entry: Entry?) -> Void) {
 		let checkApp = { [weak self] in
 			guard let self, let entry = self.entry(for: bundle) else {
-				handler(bundle, nil, nil, nil)
+				handler(bundle, nil)
 				return
 			}
 			
-			return handler(bundle, entry.version, entry.minimumOSVersion, entry.token)
+			return handler(bundle, entry)
 		}
 		
 		/// Entries are still being fetched, add the request to the queue.

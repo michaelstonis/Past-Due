@@ -36,15 +36,24 @@ extension App {
 		/// The source of the bundle (App Store, Sparkle...)
 		let source: Source
 		
-		init(version: Version, name: String, bundleIdentifier: String, fileURL: URL, source: Source) {
+		/// If this bundle represents an installed Homebrew CLI formula in `Cellar`, its formula token (e.g. `"gh"`, `"ripgrep"`).
+		let homebrewFormulaToken: String?
+		
+		/// Whether this bundle represents an installed Homebrew CLI formula rather than a macOS `.app` bundle.
+		var isHomebrewFormula: Bool {
+			homebrewFormulaToken != nil
+		}
+		
+		init(version: Version, name: String, bundleIdentifier: String, fileURL: URL, source: Source, homebrewFormulaToken: String? = nil, modificationDate: Date? = nil) {
 			self.version = version
 			self.name = name
 			self.identifier = fileURL
 			self.bundleIdentifier = bundleIdentifier
 			self.fileURL = fileURL
 			self.source = source
+			self.homebrewFormulaToken = homebrewFormulaToken
 			
-			self.modificationDate = Self.resolveModificationDate(for: fileURL)
+			self.modificationDate = modificationDate ?? Self.resolveModificationDate(for: fileURL)
 		}
 		
 		/// Computes the most accurate modification date for an `.app` bundle, accounting for in-place updaters
@@ -79,6 +88,10 @@ extension App {
 		
 		/// Opens the app and a given index
 		func open() {
+			if isHomebrewFormula {
+				NSWorkspace.shared.activateFileViewerSelecting([self.fileURL])
+				return
+			}
 			// Open application asynchronously
 			let configuration = NSWorkspace.OpenConfiguration()
 			NSWorkspace.shared.open(self.fileURL, configuration: configuration, completionHandler: nil)

@@ -134,8 +134,9 @@ final class BackgroundUpdateScheduler: NSObject, Observer {
 	/// The updates currently available, matching what the update list shows.
 	private var availableEntries: [UpdateNotificationPlanner.Entry] {
 		let includeLimitedSupport = AppListSettings.shared.includeAppsWithLimitedSupport
+		let includeHomebrew = AppListSettings.shared.includeHomebrewUpdates
 		return UpdateCheckCoordinator.shared.appProvider
-			.availableUpdates(where: { includeLimitedSupport || $0.usesBuiltInUpdater })
+			.availableUpdates(where: { (includeLimitedSupport || $0.usesBuiltInUpdater) && (includeHomebrew || !$0.isManagedByHomebrew) })
 			.map { app in
 				let version = app.remoteVersion.map { "\($0.versionNumber ?? "")-\($0.buildNumber ?? "")" } ?? ""
 				return UpdateNotificationPlanner.Entry(bundleIdentifier: app.bundleIdentifier, name: app.name, version: version)

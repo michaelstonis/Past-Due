@@ -12,6 +12,7 @@ private let ShowIgnoredUpdatesKey = "ShowIgnoredUpdatesKey"
 
 private let IncludeUnsupportedAppsKey = "ShowUnsupportedUpdatesKey"
 private let IncludeAppsWithLimitedSupportKey = "IncludeAppsWithLimitedSupportKey"
+private let IncludeHomebrewUpdatesKey = "IncludeHomebrewUpdatesKey"
 
 /// Observable front end to app list preferences.
 struct AppListSettings: Observable {
@@ -43,10 +44,11 @@ struct AppListSettings: Observable {
 	var observers = [UUID : ObservationHandler]()
 
 	private init() {
-		// Show installed updates and apps with limited support by default
+		// Show installed updates, apps with limited support, and Homebrew packages by default
 		UserDefaults.standard.register(defaults: [
 			ShowInstalledUpdatesKey: true,
-			IncludeAppsWithLimitedSupportKey: true
+			IncludeAppsWithLimitedSupportKey: true,
+			IncludeHomebrewUpdatesKey: true
 		])
 	}
 	
@@ -106,6 +108,17 @@ struct AppListSettings: Observable {
 		
 		get {
 			UserDefaults.standard.bool(forKey: IncludeAppsWithLimitedSupportKey)
+		}
+	}
+	
+	/// Whether Homebrew-managed packages (Casks and CLI Formulae) should be shown in the Homebrew section.
+	var includeHomebrewUpdates: Bool {
+		set {
+			set(newValue, forKey: IncludeHomebrewUpdatesKey)
+		}
+		
+		get {
+			UserDefaults.standard.bool(forKey: IncludeHomebrewUpdatesKey)
 		}
 	}
 	

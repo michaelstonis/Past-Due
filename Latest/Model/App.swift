@@ -123,6 +123,27 @@ extension App {
 		return self.source != .none
 	}
 	
+	/// Whether this item is directly managed by a local Homebrew installation (either an installed Caskroom cask or a Cellar CLI formula).
+	var isManagedByHomebrew: Bool {
+		if bundle.isHomebrewFormula {
+			return true
+		}
+		if source == .homebrew && usesBuiltInUpdater {
+			return true
+		}
+		return HomebrewUpdateOperation.isBundleInCaskroom(bundle)
+	}
+	
+	/// The effective support state for this app, distinguishing Caskroom/Formula-managed Homebrew packages (`.full`)
+	/// from external web-downloaded apps that only use Homebrew's catalog for version comparison (`.limited`).
+	var supportState: Source.SupportState {
+		guard supported else { return .none }
+		if isManagedByHomebrew || usesBuiltInUpdater || source == .sparkle || source == .appStore {
+			return .full
+		}
+		return .limited
+	}
+	
 	/// The date of the app when it was last updated.
 	var updateDate: Date {
 		return self.update?.date ?? self.bundle.modificationDate

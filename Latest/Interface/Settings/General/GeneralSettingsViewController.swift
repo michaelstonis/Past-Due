@@ -11,6 +11,7 @@ import AppKit
 /// Controller for settings of the General tab.
 class GeneralSettingsViewController: SettingsTabItemViewController {
 	
+	private var includeHomebrewCheckbox: NSButton?
 	private var automaticChecksCheckbox: NSButton?
 	private var intervalPopUpButton: NSPopUpButton?
 	private var notificationsCheckbox: NSButton?
@@ -77,6 +78,33 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			label.setContentCompressionResistancePriority(.required, for: .horizontal)
 			return label
 		}
+		
+		let homebrewButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("IncludeHomebrewUpdatesTitle", value: "Homebrew packages (Casks & CLI Formulae)", comment: "Checkbox title to include Homebrew-managed apps and formulae in the Homebrew sidebar pane."),
+			target: self,
+			action: #selector(toggleIncludeHomebrewUpdates(_:))
+		)
+		self.includeHomebrewCheckbox = homebrewButton
+		let homebrewRow = gridView.addRow(with: [NSGridCell.emptyContentView, homebrewButton])
+		homebrewRow.topPadding = 6
+		homebrewRow.cell(at: 1).xPlacement = .leading
+		
+		let homebrewDescContainer = NSView()
+		homebrewDescContainer.translatesAutoresizingMaskIntoConstraints = false
+		let homebrewDescLabel = NSTextField(wrappingLabelWithString: NSLocalizedString("IncludeHomebrewUpdatesDescription", value: "Show Homebrew-managed apps and command-line formulae in the lower Homebrew sidebar section.", comment: "Description below the Homebrew packages checkbox in General settings."))
+		homebrewDescLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+		homebrewDescLabel.textColor = .secondaryLabelColor
+		homebrewDescLabel.translatesAutoresizingMaskIntoConstraints = false
+		homebrewDescContainer.addSubview(homebrewDescLabel)
+		NSLayoutConstraint.activate([
+			homebrewDescLabel.leadingAnchor.constraint(equalTo: homebrewDescContainer.leadingAnchor, constant: 18),
+			homebrewDescLabel.trailingAnchor.constraint(equalTo: homebrewDescContainer.trailingAnchor),
+			homebrewDescLabel.topAnchor.constraint(equalTo: homebrewDescContainer.topAnchor),
+			homebrewDescLabel.bottomAnchor.constraint(equalTo: homebrewDescContainer.bottomAnchor),
+			homebrewDescLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 330)
+		])
+		let homebrewDescRow = gridView.addRow(with: [NSGridCell.emptyContentView, homebrewDescContainer])
+		homebrewDescRow.cell(at: 1).xPlacement = .leading
 		
 		let separator = NSBox()
 		separator.boxType = .separator
@@ -164,6 +192,8 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 	}
 	
 	private func refreshBackgroundUpdateControls() {
+		includeHomebrewCheckbox?.state = AppListSettings.shared.includeHomebrewUpdates ? .on : .off
+		
 		let settings = BackgroundCheckSettings.shared
 		let enabled = settings.automaticChecksEnabled
 		
@@ -182,6 +212,10 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			installCLIButton?.title = NSLocalizedString("InstallCLITitle", value: "Install 'past-due' Command…", comment: "Button title to install /usr/local/bin/past-due symlink.")
 			installCLIButton?.isEnabled = true
 		}
+	}
+	
+	@objc private func toggleIncludeHomebrewUpdates(_ sender: NSButton) {
+		AppListSettings.shared.includeHomebrewUpdates = (sender.state == .on)
 	}
 	
 	@objc private func toggleAutomaticChecks(_ sender: NSButton) {

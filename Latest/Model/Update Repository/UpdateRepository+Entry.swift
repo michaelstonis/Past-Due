@@ -22,6 +22,15 @@ extension UpdateRepository {
 			case displayNames = "name"
 			case rawVersion = "version"
 			case minimumOSVersion = "depends_on"
+			case description = "desc"
+			case homepage
+			case caveats
+			case downloadURL = "url"
+			case urlSpecs = "url_specs"
+		}
+		
+		private struct URLSpecs: Decodable {
+			let verified: String?
 		}
 		
 		private struct MinimumOS: Decodable {
@@ -60,6 +69,21 @@ extension UpdateRepository {
 		
 		/// The minimum os version required for the update.
 		let minimumOSVersion: OperatingSystemVersion?
+		
+		/// Human-readable description of the cask from Homebrew (`desc`).
+		let description: String?
+		
+		/// Project homepage URL string from Homebrew (`homepage`).
+		let homepage: String?
+		
+		/// Optional installation/upgrade caveats from Homebrew (`caveats`).
+		let caveats: String?
+		
+		/// Download URL string from Homebrew (`url`).
+		let downloadURL: String?
+		
+		/// Verified upstream host/path from Homebrew (`url_specs.verified`).
+		let verifiedURL: String?
 				
 		init(from decoder: Decoder) throws {
 			let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -68,6 +92,11 @@ extension UpdateRepository {
 			rawVersion = try container.decode(String.self, forKey: .rawVersion)
 			token = try container.decode(String.self, forKey: .token)
 			displayNames = (try? container.decode([String].self, forKey: .displayNames)) ?? []
+			description = try? container.decode(String.self, forKey: .description)
+			homepage = try? container.decode(String.self, forKey: .homepage)
+			caveats = try? container.decode(String.self, forKey: .caveats)
+			downloadURL = try? container.decode(String.self, forKey: .downloadURL)
+			verifiedURL = (try? container.decode(URLSpecs.self, forKey: .urlSpecs))?.verified
 			
 			// Artifacts: Contains application names and bundle identifiers.
 			let artifacts = try container.decode([FailableDecodable<Artifact>].self, forKey: .artifacts)

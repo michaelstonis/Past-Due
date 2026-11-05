@@ -147,4 +147,74 @@ final class UpdateRepositoryTest: XCTestCase {
 		let csv = AppInventoryExporter.export(apps: [app1, app2], format: .csv)
 		XCTAssertTrue(csv.contains("Alpha,com.example.alpha,1.2,,false,sparkle,Full,/Applications/Alpha.app"))
 	}
+	
+	func testHomebrewSectionSeparationSupportStateAndInfoCard() {
+		// Issue #28: Verify that Homebrew-managed updates (Caskroom & CLI Formulae) appear in their own
+		// 'Homebrew Updates' section with '.full' support, while external catalog-only matches remain '.limited'
+		// under 'Available Updates'.
+		let sparkleBundle = App.Bundle(version: Version(versionNumber: "1.0", buildNumber: nil), name: "NativeApp", bundleIdentifier: "com.example.native", fileURL: URL(fileURLWithPath: "/Applications/NativeApp.app"), source: .sparkle)
+		let sparkleUpdate = App.Update(app: sparkleBundle, remoteVersion: Version(versionNumber: "2.0", buildNumber: nil), minimumOSVersion: nil, source: .sparkle, date: nil, releaseNotes: nil, updateAction: .builtIn(block: { _ in }))
+		let nativeApp = App(bundle: sparkleBundle, update: .success(sparkleUpdate), isIgnored: false)
+		
+		let externalBrewBundle = App.Bundle(version: Version(versionNumber: "1.0", buildNumber: nil), name: "WebApp", bundleIdentifier: "com.example.webapp", fileURL: URL(fileURLWithPath: "/Applications/WebApp.app"), source: .homebrew)
+		let externalBrewUpdate = App.Update(app: externalBrewBundle, remoteVersion: Version(versionNumber: "2.0", buildNumber: nil), minimumOSVersion: nil, source: .homebrew, date: nil, releaseNotes: nil, updateAction: .external(label: "WebApp", block: { _ in }))
+		let externalApp = App(bundle: externalBrewBundle, update: .success(externalBrewUpdate), isIgnored: false)
+		
+		let formulaBundle = App.Bundle(version: Version(versionNumber: "2.50.0", buildNumber: nil), name: "gh", bundleIdentifier: "sh.brew.formula.gh", fileURL: URL(fileURLWithPath: "/opt/homebrew/Cellar/gh"), source: .homebrew, homebrewFormulaToken: "gh")
+		let formulaUpdate = App.Update(app: formulaBundle, remoteVersion: Version(versionNumber: "2.60.0", buildNumber: nil), minimumOSVersion: nil, source: .homebrew, date: nil, releaseNotes: nil, updateAction: .builtIn(block: { _ in }))
+		let formulaApp = App(bundle: formulaBundle, update: .success(formulaUpdate), isIgnored: false)
+		
+		XCTAssertFalse(nativeApp.isManagedByHomebrew)
+		XCTAssertEqual(nativeApp.supportState, .full)
+		
+		XCTAssertFalse(externalApp.isManagedByHomebrew)
+		XCTAssertEqual(externalApp.supportState, .limited)
+		
+		XCTAssertTrue(formulaApp.isManagedByHomebrew)
+		XCTAssertEqual(formulaApp.supportState, .full)
+		
+		let snapshot = AppListSnapshot(withApps: [nativeApp, formulaApp], filterQuery: nil)
+		XCTAssertEqual(snapshot.entries.count, 2, "Expected 1 section header + 1 regular app in upper entries")
+		XCTAssertEqual(snapshot.homebrewEntries.count, 2, "Expected 1 section header + 1 Homebrew app in lower homebrewEntries")
+		XCTAssertEqual(snapshot.homebrewAvailableUpdateCount, 1)
+		XCTAssertEqual(snapshot.app(at: 1, inHomebrewSection: false)?.identifier, nativeApp.identifier)
+		XCTAssertEqual(snapshot.app(at: 1, inHomebrewSection: true)?.identifier, formulaApp.identifier)
+		
+		AppListSettings.shared.includeHomebrewUpdates = false
+		let disabledSnapshot = AppListSnapshot(withApps: [nativeApp, formulaApp], filterQuery: nil)
+		XCTAssertTrue(disabledSnapshot.homebrewEntries.isEmpty, "Expected lower homebrewEntries to be empty when includeHomebrewUpdates is false")
+		XCTAssertEqual(disabledSnapshot.homebrewAvailableUpdateCount, 0)
+		AppListSettings.shared.includeHomebrewUpdates = true
+		
+		let slug = HomebrewCheckerOperation.extractGitHubRepoSlug(from: [
+			"https://cli.github.com/",
+			"https://github.com/cli/cli/archive/refs/tags/v2.60.0.tar.gz"
+		])
+		XCTAssertEqual(slug, "cli/cli")
+		
+		let infoHTML = HomebrewCheckerOperation.formattedInfoCardHTML(
+			name: "gh",
+			token: "gh",
+			kindLabel: "Homebrew Formula (CLI)",
+			isManagedByHomebrew: true,
+			installedVersion: Version(versionNumber: "2.50.0", buildNumber: nil),
+			remoteVersion: Version(versionNumber: "2.60.0", buildNumber: nil),
+			upgradeCommand: "brew upgrade --formula gh",
+			description: "GitHub command-line tool",
+			homepage: "https://cli.github.com/",
+			caveats: "Run gh auth login",
+			githubRepoSlug: slug,
+			changelogHTML: "<ul><li>Added new workflow command</li></ul>"
+		)
+		XCTAssertTrue(infoHTML.contains("GitHub command-line tool"))
+		XCTAssertTrue(infoHTML.contains("brew upgrade --formula gh"))
+		XCTAssertTrue(infoHTML.contains("https://cli.github.com/"))
+		XCTAssertTrue(infoHTML.contains("Run gh auth login"))
+		XCTAssertTrue(infoHTML.contains("2.50.0 → 2.60.0"))
+		XCTAssertTrue(infoHTML.contains("Added new workflow command"))
+		XCTAssertTrue(infoHTML.contains("https://github.com/cli/cli/compare/v2.50.0...v2.60.0"))
+		
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "gh", kind: .formula), ["upgrade", "--formula", "gh"])
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "firefox", kind: .cask), ["upgrade", "--cask", "--greedy", "firefox"])
+	}
 }

@@ -63,8 +63,9 @@ final class MenuBarController: NSObject, NSMenuDelegate, Observer {
 	
 	private func availableUpdates() -> [App] {
 		let includeExternal = AppListSettings.shared.includeAppsWithLimitedSupport
+		let includeHomebrew = AppListSettings.shared.includeHomebrewUpdates
 		return UpdateCheckCoordinator.shared.appProvider.updatableApps
-			.filter { includeExternal || $0.usesBuiltInUpdater }
+			.filter { (includeExternal || $0.usesBuiltInUpdater) && (includeHomebrew || !$0.isManagedByHomebrew) }
 			.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 	}
 	

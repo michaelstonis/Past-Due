@@ -25,10 +25,24 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		}
 	}
 	
-	/// Convenience for accessing apps that should be displayed in the table.
+	/// Convenience for accessing regular apps that should be displayed in the upper table.
 	var apps: [AppListSnapshot.Entry] {
 		return self.snapshot.entries
 	}
+	
+	/// Convenience for accessing Homebrew packages displayed in the lower Homebrew table.
+	var homebrewApps: [AppListSnapshot.Entry] {
+		return self.snapshot.homebrewEntries
+	}
+	
+	/// Lower sidebar container and table view dedicated to Homebrew-managed Casks and Formulae.
+	private var homebrewContainerView: NSView?
+	private var homebrewTableView: UpdateTableView?
+	private var homebrewCountLabel: NSTextField?
+	private var homebrewCollapseButton: NSButton?
+	private var homebrewCollapsedConstraint: NSLayoutConstraint?
+	private var homebrewExpandedHeightConstraint: NSLayoutConstraint?
+	private var isHomebrewSectionCollapsed = false
 	        
     /// The detail view controller that shows the release notes
     weak var releaseNotesViewController : ReleaseNotesViewController?
@@ -75,6 +89,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
                         
         self.tableViewMenu.delegate = self
         self.tableView.menu = self.tableViewMenu
+		self.setupHomebrewSectionView()
 		
 		AppListSettings.shared.add(self, handler: self.updateSnapshot)
         
@@ -131,7 +146,15 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 	
     // MARK: Table View Delegate
 	
-	private func contentCell(for app: App) -> NSView? {
+	private func isHomebrew(_ tableView: NSTableView) -> Bool {
+		return tableView === self.homebrewTableView
+	}
+	
+	private func entries(for tableView: NSTableView) -> [AppListSnapshot.Entry] {
+		return isHomebrew(tableView) ? self.homebrewApps : self.apps
+	}
+	
+	private func contentCell(for app: App, in tableView: NSTableView) -> NSView? {
         guard let cell = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: "MLMUpdateCellIdentifier"), owner: self) as? UpdateCell else {
             return nil
         }
@@ -149,8 +172,8 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
         return cell
 	}
 	
-	private func headerCell(of section: AppListSnapshot.Section) -> NSView? {
-		let view = self.tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: "MLMUpdateCellSectionIdentifier"), owner: self) as? UpdateGroupCellView
+	private func headerCell(of section: AppListSnapshot.Section, in tableView: NSTableView) -> NSView? {
+		let view = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier(rawValue: "MLMUpdateCellSectionIdentifier"), owner: self) as? UpdateGroupCellView
 		
 		view?.section = section
 		
@@ -158,22 +181,23 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 	}
     
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-		// Ensure the index is valid
-		guard row >= 0 && row < self.apps.count else { return nil }
+		let list = entries(for: tableView)
+		guard row >= 0 && row < list.count else { return nil }
 		
-		switch self.apps[row] {
+		switch list[row] {
 		case .app(let app):
-			return self.contentCell(for: app)
+			return self.contentCell(for: app, in: tableView)
 		case .section(let section):
-			return self.headerCell(of: section)
+			return self.headerCell(of: section, in: tableView)
 		}
     }
     
     func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
-		// Ensure the index is valid
-		guard row >= 0 && row < self.apps.count else { return nil }
+		let inBrew = isHomebrew(tableView)
+		let list = entries(for: tableView)
+		guard row >= 0 && row < list.count else { return nil }
 		
-		if self.snapshot.isSectionHeader(at: row) {
+		if self.snapshot.isSectionHeader(at: row, inHomebrewSection: inBrew) {
 			return UpdateGroupRowView()
 		}
 		
@@ -181,26 +205,29 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     }
     
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-		// Ensure the index is valid
-		guard row >= 0 && row < self.apps.count else { return -1 }
-		return self.snapshot.isSectionHeader(at: row) ? 27 : 65
+		let inBrew = isHomebrew(tableView)
+		let list = entries(for: tableView)
+		guard row >= 0 && row < list.count else { return -1 }
+		return self.snapshot.isSectionHeader(at: row, inHomebrewSection: inBrew) ? 27 : 65
     }
     
     func tableView(_ tableView: NSTableView, isGroupRow row: Int) -> Bool {
-		// Ensure the index is valid
-		guard row >= 0 && row < self.apps.count else { return false }
-        return self.snapshot.isSectionHeader(at: row)
+		let inBrew = isHomebrew(tableView)
+		let list = entries(for: tableView)
+		guard row >= 0 && row < list.count else { return false }
+        return self.snapshot.isSectionHeader(at: row, inHomebrewSection: inBrew)
     }
     
     func tableView(_ tableView: NSTableView, rowActionsForRow row: Int, edge: NSTableView.RowActionEdge) -> [NSTableViewRowAction] {
-		// Ensure the index is valid
-		guard row >= 0 && row < self.apps.count else { return [] }
+		let inBrew = isHomebrew(tableView)
+		let list = entries(for: tableView)
+		guard row >= 0 && row < list.count else { return [] }
 
 		// Prevent section headers from displaying row actions
-		if self.snapshot.isSectionHeader(at: row) { return [] }
+		if self.snapshot.isSectionHeader(at: row, inHomebrewSection: inBrew) { return [] }
 		
         if edge == .trailing {
-			guard let app = self.snapshot.app(at: row) else { return [] }
+			guard let app = self.snapshot.app(at: row, inHomebrewSection: inBrew) else { return [] }
 			
 			// Don't provide an update action if the app has no update available
 			if !app.updateAvailable || app.isUpdating {
@@ -208,7 +235,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 			}
 			
             let action = NSTableViewRowAction(style: .regular, title: updateTitle(for: app), handler: { (action, row) in
-                self.updateApp(atIndex: row)
+                self.snapshot.app(at: row, inHomebrewSection: inBrew)?.performUpdate()
 				tableView.rowActionsVisible = false
             })
 			
@@ -218,13 +245,13 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
             return [action]
         } else if edge == .leading {
 			let open = NSTableViewRowAction(style: .regular, title: NSLocalizedString("OpenAction", comment: "Action to open a given app.")) { action, row in
-				self.openApp(at: row)
+				self.snapshot.app(at: row, inHomebrewSection: inBrew)?.open()
 				tableView.rowActionsVisible = false
 			}
 			open.image = NSImage(systemSymbolName: "arrow.up.forward.app", accessibilityDescription: nil)
 			
             let reveal = NSTableViewRowAction(style: .regular, title: NSLocalizedString("RevealAction", comment: "Revea in Finder Row action"), handler: { (action, row) in
-                self.showAppInFinder(at: row)
+                self.snapshot.app(at: row, inHomebrewSection: inBrew)?.showInFinder()
 				tableView.rowActionsVisible = false
             })
 			reveal.backgroundColor = .systemGray
@@ -237,20 +264,43 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     }
     
     func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
-		// Ensure the index is valid
-		guard row >= 0 && row < self.apps.count else { return false }
+		let inBrew = isHomebrew(tableView)
+		let list = entries(for: tableView)
+		guard row >= 0 && row < list.count else { return false }
 
-        return !self.snapshot.isSectionHeader(at: row)
+        return !self.snapshot.isSectionHeader(at: row, inHomebrewSection: inBrew)
     }
     
     func tableViewSelectionDidChange(_ notification: Notification) {
-        self.selectApp(at: self.tableView.selectedRow)
+		guard let changedTable = notification.object as? NSTableView else {
+			self.selectApp(at: self.tableView.selectedRow)
+			return
+		}
+		if isHomebrew(changedTable) {
+			let row = changedTable.selectedRow
+			guard row >= 0, let app = self.snapshot.app(at: row, inHomebrewSection: true) else {
+				if self.tableView.selectedRow < 0 {
+					self.selectApp(at: nil)
+				}
+				return
+			}
+			self.tableView.deselectAll(nil)
+			self.selectedApp = app
+			self.releaseNotesViewController?.display(releaseNotesFor: app)
+		} else {
+			if self.tableView.selectedRow >= 0 {
+				self.homebrewTableView?.deselectAll(nil)
+				self.selectApp(at: self.tableView.selectedRow)
+			} else if (self.homebrewTableView?.selectedRow ?? -1) < 0 {
+				self.selectApp(at: nil)
+			}
+		}
     }
     
     // MARK: Table View Data Source
     
     func numberOfRows(in tableView: NSTableView) -> Int {
-		return self.apps.count
+		return entries(for: tableView).count
     }
 	
 	
@@ -288,6 +338,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		self.newSnapshot = nil
 		self.snapshot = snapshot
 		self.tableView.reloadData()
+		self.reloadHomebrewSection()
 		
 		// Update selected app
 		self.ensureSelection()
@@ -304,6 +355,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		self.snapshot = snapshot
 		self.newSnapshot = nil
 		self.updateTableView(with: oldSnapshot, with: self.snapshot)
+		self.reloadHomebrewSection()
 		
 		// Update selected app
 		self.ensureSelection()
@@ -322,13 +374,14 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     }
 
     /**
-    Selects the app at the given index.
+    Selects the app at the given index in the upper regular apps table.
      - parameter index: The index of the given app. If nil, the currently selected app is deselected.
      */
     func selectApp(at index: Int?) {
         guard let index = index, index >= 0, let app = self.snapshot.app(at: index) else {
 			self.selectedApp = nil
             self.tableView.deselectAll(nil)
+			self.homebrewTableView?.deselectAll(nil)
 			self.scrubber?.animator().selectedIndex = -1
 			
 			// Clear release notes
@@ -339,6 +392,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
             return
         }
         
+		self.homebrewTableView?.deselectAll(nil)
 		if self.selectedApp?.identifier == app.identifier && index == self.tableView.selectedRow {
 			if self.selectedApp !== app {
 				self.selectedApp = app
@@ -360,42 +414,52 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     
     // MARK: - Menu Item Stuff
 	
-	private func rowIndex(forMenuItem menuItem: NSMenuItem?) -> Int {
-		guard let app = menuItem?.representedObject as? App, let index = self.snapshot.index(of: app) else { return self.tableView.selectedRow }
-		return index
+	private func targetApp(forMenuItem menuItem: NSMenuItem?) -> App? {
+		if let app = menuItem?.representedObject as? App {
+			return app
+		}
+		if let selected = self.selectedApp {
+			return selected
+		}
+		return self.app(at: self.tableView.selectedRow)
 	}
     
     /// Open a single app
     @IBAction func updateApp(_ sender: NSMenuItem?) {
-		self.updateApp(atIndex: self.rowIndex(forMenuItem: sender))
+		guard let app = self.targetApp(forMenuItem: sender) else { return }
+		DispatchQueue.main.async {
+			app.performUpdate()
+		}
     }
 	
 	@IBAction func ignoreApp(_ sender: NSMenuItem?) {
-		self.setIgnored(true, forAppAt: self.rowIndex(forMenuItem: sender))
+		guard let app = self.targetApp(forMenuItem: sender) else { return }
+		UpdateCheckCoordinator.shared.appProvider.setIgnoredState(true, for: app)
 	}
 	
 	@IBAction func unignoreApp(_ sender: NSMenuItem?) {
-		self.setIgnored(false, forAppAt: self.rowIndex(forMenuItem: sender))
+		guard let app = self.targetApp(forMenuItem: sender) else { return }
+		UpdateCheckCoordinator.shared.appProvider.setIgnoredState(false, for: app)
 	}
 	
 	@IBAction func skipVersion(_ sender: NSMenuItem?) {
-		guard let app = self.app(at: self.rowIndex(forMenuItem: sender)), let remoteVersion = app.remoteVersion else { return }
+		guard let app = self.targetApp(forMenuItem: sender), let remoteVersion = app.remoteVersion else { return }
 		UpdateCheckCoordinator.shared.appProvider.setSkippedVersion(remoteVersion, for: app)
 	}
 	
 	@IBAction func unskipVersion(_ sender: NSMenuItem?) {
-		guard let app = self.app(at: self.rowIndex(forMenuItem: sender)) else { return }
+		guard let app = self.targetApp(forMenuItem: sender) else { return }
 		UpdateCheckCoordinator.shared.appProvider.setSkippedVersion(nil, for: app)
 	}
 	
 	/// Opens the selected app
 	@IBAction func openApp(_ sender: NSMenuItem?) {
-		self.openApp(at: self.rowIndex(forMenuItem: sender))
+		self.targetApp(forMenuItem: sender)?.open()
 	}
     
     /// Show the bundle of an app in Finder
     @IBAction func showAppInFinder(_ sender: NSMenuItem?) {
-        self.showAppInFinder(at: self.rowIndex(forMenuItem: sender))
+        self.targetApp(forMenuItem: sender)?.showInFinder()
     }
     
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
@@ -403,8 +467,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
             return true
         }
         
-		let index = self.rowIndex(forMenuItem: menuItem)
-		guard index >= 0, let app = self.snapshot.app(at: index) else {
+		guard let app = self.targetApp(forMenuItem: menuItem) else {
 			return false
 		}
 		
@@ -444,9 +507,17 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     
     func menuNeedsUpdate(_ menu: NSMenu) {
 		ensureSkipVersionMenuItems(in: menu)
+		let brewRow = self.homebrewTableView?.clickedRow ?? -1
+		if brewRow != -1, !self.snapshot.isSectionHeader(at: brewRow, inHomebrewSection: true) {
+			let clickedApp = self.snapshot.app(at: brewRow, inHomebrewSection: true)
+			menu.items.forEach({ $0.representedObject = clickedApp })
+			return
+		}
         let row = self.tableView.clickedRow
-        
-        guard row != -1, !self.snapshot.isSectionHeader(at: row) else { return }
+        guard row != -1, !self.snapshot.isSectionHeader(at: row) else {
+			menu.items.forEach({ $0.representedObject = nil })
+			return
+		}
 		menu.items.forEach({ $0.representedObject = self.snapshot.app(at: row) })
     }
 	
@@ -523,7 +594,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     /// Updates the UI depending on available updates (show empty states or update list)
     private func updatePlaceholderVisibility() {
 		// Only show placeholder if there are no apps and also no active search (which might produce an empty list)
-		let showPlaceholder = self.apps.isEmpty && self.snapshot.filterQuery == nil
+		let showPlaceholder = self.apps.isEmpty && self.homebrewApps.isEmpty && self.snapshot.filterQuery == nil
 		
         if showPlaceholder && self.placeholderLabel.isHidden {
             self.tableView.isHidden = true
@@ -537,7 +608,10 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     /// Updates the title in the toolbar ("No / n updates available") and the badge of the app icon
     private func updateTitleAndBatch() {
 		let showExternalUpdates = AppListSettings.shared.includeAppsWithLimitedSupport
-		let count = UpdateCheckCoordinator.shared.appProvider.countOfAvailableUpdates(where: { showExternalUpdates || $0.usesBuiltInUpdater })
+		let showHomebrewUpdates = AppListSettings.shared.includeHomebrewUpdates
+		let count = UpdateCheckCoordinator.shared.appProvider.countOfAvailableUpdates(where: {
+			(showExternalUpdates || $0.usesBuiltInUpdater) && (showHomebrewUpdates || !$0.isManagedByHomebrew)
+		})
 		let statusText: String
 		
 		// Update dock badge
@@ -551,7 +625,232 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 	}
 	
 	private func ensureSelection() {
-		self.selectApp(at: self.selectedAppIndex)
+		if let app = self.selectedApp {
+			if let regularIndex = self.snapshot.index(of: app) {
+				self.selectApp(at: regularIndex)
+				return
+			}
+			if let brewIndex = self.snapshot.homebrewIndex(of: app),
+			   let updatedApp = self.snapshot.app(at: brewIndex, inHomebrewSection: true) {
+				self.tableView.deselectAll(nil)
+				self.homebrewTableView?.selectRowIndexes(IndexSet(integer: brewIndex), byExtendingSelection: false)
+				self.selectedApp = updatedApp
+				self.releaseNotesViewController?.display(releaseNotesFor: updatedApp)
+				return
+			}
+		}
+		self.selectApp(at: nil)
+	}
+	
+	// MARK: - Lower Homebrew Sidebar Pane
+	
+	private func setupHomebrewSectionView() {
+		guard let upperScrollView = self.tableView.enclosingScrollView else { return }
+		
+		let container = NSView()
+		container.translatesAutoresizingMaskIntoConstraints = false
+		container.wantsLayer = true
+		self.view.addSubview(container)
+		self.homebrewContainerView = container
+		
+		// Replace the upper scrollView's bottom constraint to self.view with a constraint to container.topAnchor
+		for constraint in self.view.constraints {
+			if (constraint.firstItem as? NSView === upperScrollView && constraint.firstAttribute == .bottom) ||
+			   (constraint.secondItem as? NSView === upperScrollView && constraint.secondAttribute == .bottom) {
+				constraint.isActive = false
+			}
+		}
+		
+		// Top separator line
+		let separator = NSBox()
+		separator.boxType = .separator
+		separator.translatesAutoresizingMaskIntoConstraints = false
+		container.addSubview(separator)
+		
+		// Header bar
+		let headerView = NSVisualEffectView()
+		headerView.material = .sidebar
+		headerView.blendingMode = .withinWindow
+		headerView.translatesAutoresizingMaskIntoConstraints = false
+		container.addSubview(headerView)
+		
+		let disclosureButton = NSButton()
+		disclosureButton.bezelStyle = .disclosure
+		disclosureButton.setButtonType(.pushOnPushOff)
+		disclosureButton.title = ""
+		disclosureButton.state = .on
+		disclosureButton.target = self
+		disclosureButton.action = #selector(toggleHomebrewSectionCollapsed(_:))
+		disclosureButton.translatesAutoresizingMaskIntoConstraints = false
+		headerView.addSubview(disclosureButton)
+		self.homebrewCollapseButton = disclosureButton
+		
+		let iconView = NSImageView()
+		iconView.translatesAutoresizingMaskIntoConstraints = false
+		if let symbol = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: "Homebrew") {
+			iconView.image = symbol
+			iconView.contentTintColor = .secondaryLabelColor
+		}
+		headerView.addSubview(iconView)
+		
+		let titleButton = NSButton(title: NSLocalizedString("HomebrewSectionHeaderTitle", value: "Homebrew", comment: "Lower sidebar section title for Homebrew packages"), target: self, action: #selector(toggleHomebrewSectionCollapsed(_:)))
+		titleButton.isBordered = false
+		titleButton.font = .systemFont(ofSize: 12, weight: .semibold)
+		titleButton.contentTintColor = .secondaryLabelColor
+		titleButton.alignment = .left
+		titleButton.translatesAutoresizingMaskIntoConstraints = false
+		headerView.addSubview(titleButton)
+		
+		let countLabel = NSTextField(labelWithString: "")
+		countLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+		countLabel.textColor = .secondaryLabelColor
+		countLabel.alignment = .right
+		countLabel.translatesAutoresizingMaskIntoConstraints = false
+		headerView.addSubview(countLabel)
+		self.homebrewCountLabel = countLabel
+		
+		let headerBottomSeparator = NSBox()
+		headerBottomSeparator.boxType = .separator
+		headerBottomSeparator.translatesAutoresizingMaskIntoConstraints = false
+		headerView.addSubview(headerBottomSeparator)
+		
+		// Lower ScrollView + UpdateTableView
+		let brewScrollView = NSScrollView()
+		brewScrollView.drawsBackground = false
+		brewScrollView.hasVerticalScroller = true
+		brewScrollView.autohidesScrollers = true
+		brewScrollView.borderType = .noBorder
+		brewScrollView.translatesAutoresizingMaskIntoConstraints = false
+		container.addSubview(brewScrollView)
+		
+		let brewTable = UpdateTableView()
+		brewTable.headerView = nil
+		brewTable.backgroundColor = .clear
+		brewTable.rowHeight = self.tableView.rowHeight
+		brewTable.intercellSpacing = self.tableView.intercellSpacing
+		brewTable.selectionHighlightStyle = self.tableView.selectionHighlightStyle
+		if #available(macOS 11.0, *) {
+			brewTable.style = self.tableView.style
+		}
+		let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("HomebrewColumn"))
+		col.resizingMask = .autoresizingMask
+		brewTable.addTableColumn(col)
+		brewTable.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+		
+		// Register cell nibs copied from the primary Storyboard tableView
+		if let registeredNibs = self.tableView.registeredNibsByIdentifier {
+			for (identifier, nib) in registeredNibs {
+				brewTable.register(nib, forIdentifier: identifier)
+			}
+		}
+		
+		brewTable.delegate = self
+		brewTable.dataSource = self
+		brewTable.menu = self.tableViewMenu
+		brewScrollView.documentView = brewTable
+		self.homebrewTableView = brewTable
+		
+		let collapsedHeight = container.heightAnchor.constraint(equalToConstant: 0)
+		collapsedHeight.priority = .defaultHigh
+		self.homebrewCollapsedConstraint = collapsedHeight
+		
+		let expandedHeight = container.heightAnchor.constraint(equalTo: self.view.heightAnchor, multiplier: 0.42)
+		expandedHeight.priority = NSLayoutConstraint.Priority(740)
+		self.homebrewExpandedHeightConstraint = expandedHeight
+		
+		NSLayoutConstraint.activate([
+			upperScrollView.bottomAnchor.constraint(equalTo: container.topAnchor),
+			container.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+			container.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+			container.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+			collapsedHeight,
+			
+			separator.topAnchor.constraint(equalTo: container.topAnchor),
+			separator.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+			separator.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+			
+			headerView.topAnchor.constraint(equalTo: container.topAnchor, constant: 1),
+			headerView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+			headerView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+			headerView.heightAnchor.constraint(equalToConstant: 30),
+			
+			disclosureButton.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 10),
+			disclosureButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+			
+			iconView.leadingAnchor.constraint(equalTo: disclosureButton.trailingAnchor, constant: 4),
+			iconView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+			iconView.widthAnchor.constraint(equalToConstant: 14),
+			iconView.heightAnchor.constraint(equalToConstant: 14),
+			
+			titleButton.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 5),
+			titleButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+			
+			countLabel.leadingAnchor.constraint(greaterThanOrEqualTo: titleButton.trailingAnchor, constant: 8),
+			countLabel.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -14),
+			countLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+			
+			headerBottomSeparator.bottomAnchor.constraint(equalTo: headerView.bottomAnchor),
+			headerBottomSeparator.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+			headerBottomSeparator.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
+			
+			brewScrollView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
+			brewScrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+			brewScrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+			brewScrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+		])
+		
+		container.isHidden = true
+	}
+	
+	private func reloadHomebrewSection() {
+		guard let container = self.homebrewContainerView,
+			  let brewTable = self.homebrewTableView else { return }
+		
+		brewTable.reloadData()
+		
+		let hasHomebrewEntries = !self.homebrewApps.isEmpty
+		if !hasHomebrewEntries {
+			container.isHidden = true
+			self.homebrewExpandedHeightConstraint?.isActive = false
+			self.homebrewCollapsedConstraint?.constant = 0
+			self.homebrewCollapsedConstraint?.isActive = true
+			return
+		}
+		
+		container.isHidden = false
+		let updateCount = self.snapshot.homebrewAvailableUpdateCount
+		let totalPackages = self.homebrewApps.reduce(0) { count, entry in
+			if case .app = entry { return count + 1 }
+			return count
+		}
+		if updateCount > 0 {
+			self.homebrewCountLabel?.stringValue = String.localizedStringWithFormat(
+				NSLocalizedString("HomebrewUpdateCountBadge", value: "%d update(s)", comment: "Badge count in the Homebrew lower sidebar header"),
+				updateCount
+			)
+		} else {
+			self.homebrewCountLabel?.stringValue = "\(totalPackages)"
+		}
+		
+		if self.isHomebrewSectionCollapsed {
+			self.homebrewExpandedHeightConstraint?.isActive = false
+			self.homebrewCollapsedConstraint?.constant = 31
+			self.homebrewCollapsedConstraint?.isActive = true
+		} else {
+			self.homebrewCollapsedConstraint?.isActive = false
+			self.homebrewExpandedHeightConstraint?.isActive = true
+		}
+	}
+	
+	@objc private func toggleHomebrewSectionCollapsed(_ sender: Any?) {
+		self.isHomebrewSectionCollapsed.toggle()
+		self.homebrewCollapseButton?.state = self.isHomebrewSectionCollapsed ? .off : .on
+		NSAnimationContext.runAnimationGroup { context in
+			context.duration = 0.2
+			context.allowsImplicitAnimation = true
+			self.reloadHomebrewSection()
+			self.view.layoutSubtreeIfNeeded()
+		}
 	}
 	
 	/// Animates changes made to the apps list
