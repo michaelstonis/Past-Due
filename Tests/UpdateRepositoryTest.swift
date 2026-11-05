@@ -217,4 +217,23 @@ final class UpdateRepositoryTest: XCTestCase {
 		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "gh", kind: .formula), ["upgrade", "--formula", "gh"])
 		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "firefox", kind: .cask), ["upgrade", "--cask", "--greedy", "firefox"])
 	}
+
+	func testStartupCacheRestoredAppsRemainUncheckedUntilInitialCheckRuns() {
+		let store = AppDataStore()
+		let cachedBundle = App.Bundle(version: Version(versionNumber: "1.0", buildNumber: "1"), name: "CachedApp", bundleIdentifier: "com.example.cached", fileURL: URL(fileURLWithPath: "/Applications/CachedApp.app"), source: .sparkle)
+		let newlyAddedBundle = App.Bundle(version: Version(versionNumber: "2.0", buildNumber: "1"), name: "NewApp", bundleIdentifier: "com.example.new", fileURL: URL(fileURLWithPath: "/Applications/NewApp.app"), source: .sparkle)
+		
+		// Simulate startup cache restoration (apps loaded with update == nil)
+		_ = store.set(appBundles: [cachedBundle])
+		XCTAssertTrue(store.allApps.allSatisfy { !$0.hasBeenChecked })
+		
+		// Simulate initial directory scan completing where 1 new bundle was added since the cache was saved
+		let newApps = store.set(appBundles: [cachedBundle, newlyAddedBundle])
+		XCTAssertEqual(newApps.count, 1, "Only the newly added bundle is in newApps")
+		
+		// Including uncheckedBundles ensures the cache-restored bundle is ALSO checked on startup
+		let uncheckedBundles = store.allApps.filter { !$0.hasBeenChecked }.map { $0.bundle }
+		let changedOrUnchecked = Set(newApps.map { $0.bundle }).union(uncheckedBundles)
+		XCTAssertEqual(changedOrUnchecked.count, 2, "Both cached and newly added bundles must be checked on startup")
+	}
 }

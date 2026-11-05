@@ -100,6 +100,9 @@ class UpdateCheckCoordinator {
 	
 	/// Whether the checker is currently waiting for the initial update check.
 	private var waitForInitialCheck = true
+	
+	/// Whether the initial directory scan is still in flight.
+	private var isInitialScanInProgress = false
 
 	/// The delegate for the progress of the entire update checking progress
     weak var progressDelegate : UpdateCheckProgressReporting?
@@ -108,9 +111,12 @@ class UpdateCheckCoordinator {
 	private lazy var library: AppLibrary = {
 		return AppLibrary(
 			handler: { bundles in
-				// Set new bundles and check for updates
+				self.isInitialScanInProgress = false
+				// Set new bundles and check any newly discovered, modified, or still-unchecked (cache-restored) apps
 				let newApps = self.dataStore.set(appBundles: Set(bundles))
-				let bundlesToCheck = newApps.isEmpty ? bundles : newApps.map({ $0.bundle })
+				let uncheckedBundles = self.dataStore.allApps.filter { !$0.hasBeenChecked }.map { $0.bundle }
+				let changedOrUnchecked = Set(newApps.map { $0.bundle }).union(uncheckedBundles)
+				let bundlesToCheck = changedOrUnchecked.isEmpty ? bundles : Array(changedOrUnchecked)
 				self.runUpdateCheck(on: bundlesToCheck)
 			},
 			observationFailureHandler: { url, error in
@@ -141,7 +147,14 @@ class UpdateCheckCoordinator {
 
 		if self.waitForInitialCheck {
 			self.waitForInitialCheck = false
+			self.isInitialScanInProgress = true
 			self.library.startQuery()
+			return
+		}
+		
+		// If another caller invokes run() while the initial directory scan is still in flight,
+		// let the initial scan completion handler kick off the update check with the full bundle list.
+		if self.isInitialScanInProgress {
 			return
 		}
 

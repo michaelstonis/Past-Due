@@ -85,6 +85,11 @@ extension App {
 			return nil
 		}
 	}
+	
+	/// Whether an update check has completed for this app in the current session.
+	var hasBeenChecked: Bool {
+		return updateResult != nil
+	}
 
 	
 	// MARK: - Bundle Properties
