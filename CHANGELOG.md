@@ -1,3 +1,7 @@
+# 1.5.1
+#### Bug Fixes:
+- Ensure all cache-restored apps are checked on startup.
+
 # 1.5.0
 #### New and Improved:
 - Add split Homebrew sidebar pane, CLI formulae, and GitHub release diffs (#28).
