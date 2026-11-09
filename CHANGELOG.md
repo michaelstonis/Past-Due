@@ -1,3 +1,7 @@
+# 1.6.1
+#### Bug Fixes:
+- Fix percent-encoded installer path (#34), mas-cli fallback (#31), Setapp (#32), and MacPorts/Nix/CLI package managers (#29, #30, #33).
+
 # 1.6.0
 #### New and Improved:
 - Add Applications section header and vertically resizable Homebrew pane.

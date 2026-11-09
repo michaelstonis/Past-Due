@@ -1,6 +1,6 @@
 cask "past-due" do
-  version "1.6.0"
-  sha256 "551d72f74bf43599356905c6915e84e289241220ed34ef3b79de4ab94a6181a4"
+  version "1.6.1"
+  sha256 "8eb3199fb08bf1f4b59b4644ea440377a9af47163d81a8c441cb3fcc65376944"
 
   url "https://github.com/michaelstonis/Past-Due/releases/download/v#{version}/Past-Due-#{version}.dmg"
   name "Past Due"
