@@ -1,3 +1,7 @@
+# 1.7.0
+#### New and Improved:
+- Add per-package-manager sidebar sections, settings toggles, and self-update dialog.
+
 # 1.6.1
 #### Bug Fixes:
 - Fix percent-encoded installer path (#34), mas-cli fallback (#31), Setapp (#32), and MacPorts/Nix/CLI package managers (#29, #30, #33).
