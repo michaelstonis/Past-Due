@@ -46,6 +46,7 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 	/// Lower sidebar container and table view dedicated to Homebrew-managed Casks and Formulae.
 	private var homebrewContainerView: NSView?
 	private var homebrewTableView: UpdateTableView?
+	private var homebrewTitleLabel: NSTextField?
 	private var homebrewCountLabel: NSTextField?
 	private var homebrewCollapseButton: NSButton?
 	private var homebrewCollapsedConstraint: NSLayoutConstraint?
@@ -621,9 +622,8 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
     /// Updates the title in the toolbar ("No / n updates available") and the badge of the app icon
     private func updateTitleAndBatch() {
 		let showExternalUpdates = AppListSettings.shared.includeAppsWithLimitedSupport
-		let showHomebrewUpdates = AppListSettings.shared.includeHomebrewUpdates
 		let count = UpdateCheckCoordinator.shared.appProvider.countOfAvailableUpdates(where: {
-			(showExternalUpdates || $0.usesBuiltInUpdater) && (showHomebrewUpdates || !$0.isManagedByHomebrew)
+			(showExternalUpdates || $0.usesBuiltInUpdater) && (!$0.isManagedByHomebrew || $0.isPackageSourceEnabled)
 		})
 		let statusText: String
 		
@@ -775,12 +775,13 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		}
 		headerView.addSubview(iconView)
 		
-		let titleButton = NSTextField(labelWithString: NSLocalizedString("HomebrewSectionHeaderTitle", value: "Homebrew", comment: "Lower sidebar section title for Homebrew packages"))
+		let titleButton = NSTextField(labelWithString: NSLocalizedString("HomebrewSectionHeaderTitle", value: "Packages", comment: "Lower sidebar section title for Homebrew & CLI packages"))
 		titleButton.font = .systemFont(ofSize: 12, weight: .semibold)
 		titleButton.textColor = .secondaryLabelColor
 		titleButton.alignment = .left
 		titleButton.translatesAutoresizingMaskIntoConstraints = false
 		headerView.addSubview(titleButton)
+		self.homebrewTitleLabel = titleButton
 		
 		let countLabel = NSTextField(labelWithString: "")
 		countLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
@@ -961,6 +962,15 @@ class UpdateTableViewController: NSViewController, NSMenuItemValidation, NSTable
 		}
 		
 		container.isHidden = false
+		let activeSources = Set(self.homebrewApps.compactMap { entry -> String? in
+			if case .app(let app) = entry { return app.packageKind?.sectionTitle ?? "Homebrew" }
+			return nil
+		})
+		if activeSources.count == 1, let singleSource = activeSources.first {
+			self.homebrewTitleLabel?.stringValue = singleSource
+		} else {
+			self.homebrewTitleLabel?.stringValue = NSLocalizedString("PackagesSectionHeaderTitle", value: "Packages", comment: "Lower sidebar section title when multiple package managers are active")
+		}
 		let updateCount = self.snapshot.homebrewAvailableUpdateCount
 		let totalPackages = self.homebrewApps.reduce(0) { count, entry in
 			if case .app = entry { return count + 1 }

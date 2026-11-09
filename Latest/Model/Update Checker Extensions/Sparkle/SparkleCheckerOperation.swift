@@ -107,12 +107,22 @@ class SparkleUpdateCheckerOperation: StatefulOperation, UpdateCheckerOperation, 
 			releaseNotes = .url(url: url)
 		}
 		
-		// Build update
-		self.update = App.Update(app: self.app, remoteVersion: version, minimumOSVersion: minimumOSVersion, source: .sparkle, date: appcastItem.date, releaseNotes: releaseNotes, updateAction: .builtIn(block: { app in
-			UpdateQueue.shared.addOperation(SparkleUpdateOperation(bundleURL: app.fileURL, bundleIdentifier: app.bundleIdentifier, appIdentifier: app.identifier))
-		}))
+		// Build update: when updating Past Due itself, present the app's own Sparkle update dialog separately
+		let isSelfBundle = (self.app.bundleIdentifier == Bundle.main.bundleIdentifier)
+		let action: App.Update.Action
+		if isSelfBundle {
+			action = .builtIn(block: { _ in
+				AppDelegate.presentSelfUpdateDialog()
+			})
+		} else {
+			action = .builtIn(block: { app in
+				UpdateQueue.shared.addOperation(SparkleUpdateOperation(bundleURL: app.fileURL, bundleIdentifier: app.bundleIdentifier, appIdentifier: app.identifier))
+			})
+		}
+		self.update = App.Update(app: self.app, remoteVersion: version, minimumOSVersion: minimumOSVersion, source: .sparkle, date: appcastItem.date, releaseNotes: releaseNotes, updateAction: action)
 
 		DispatchQueue.main.async(execute: {
+			self.updater = nil
 			self.finish()
 		})
 	}
@@ -128,6 +138,7 @@ extension SparkleUpdateCheckerOperation: SPUUserDriver {
 	}
 	
 	func showUpdateFound(with appcastItem: SUAppcastItem, state: SPUUserUpdateState, reply: @escaping (SPUUserUpdateChoice) -> Void) {
+		reply(.dismiss)
 		self.finish(with: appcastItem)
 	}
 		
@@ -141,11 +152,13 @@ extension SparkleUpdateCheckerOperation: SPUUserDriver {
 			self.finish(with: appcastItem)
 		}
 		
+		self.updater = nil
 		self.finish(with: error)
 		acknowledgement()
 	}
 	
 	func showUpdaterError(_ error: Error, acknowledgement: @escaping () -> Void) {
+		self.updater = nil
 		self.finish(with: error)
 		acknowledgement()
 	}

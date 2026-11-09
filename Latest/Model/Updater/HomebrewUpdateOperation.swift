@@ -26,8 +26,30 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 			case .macports: return "MacPorts Package"
 			case .nix: return "Nix Profile Package"
 			case .cargo: return "Cargo Crate (Rust CLI)"
-			case .uvTool: return "uv Tool (Python CLI)"
-			case .npmGlobal: return "npm Global Package"
+			case .uvTool: return "uv / pipx Tool (Python CLI)"
+			case .npmGlobal: return "npm Global Package (Node.js CLI)"
+			}
+		}
+		
+		var sectionTitle: String {
+			switch self {
+			case .cask, .formula: return "Homebrew"
+			case .npmGlobal: return "Node.js CLI (npm)"
+			case .uvTool: return "Python CLI (uv / pipx)"
+			case .cargo: return "Rust CLI (Cargo)"
+			case .macports: return "MacPorts"
+			case .nix: return "Nix"
+			}
+		}
+		
+		func isEnabled(in settings: AppListSettings = .shared) -> Bool {
+			switch self {
+			case .cask, .formula: return settings.includeHomebrewUpdates
+			case .npmGlobal: return settings.includeNPMUpdates
+			case .uvTool: return settings.includeUVUpdates
+			case .cargo: return settings.includeCargoUpdates
+			case .macports: return settings.includeMacPortsUpdates
+			case .nix: return settings.includeNixUpdates
 			}
 		}
 	}
@@ -82,6 +104,17 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 		token.range(of: "^[a-z0-9][a-z0-9@._+-]*$", options: .regularExpression) != nil
 	}
 	
+	/// Validates package names across Homebrew and non-Homebrew package managers (including scoped `@scope/pkg` npm names).
+	static func isValid(packageName name: String, for kind: PackageKind) -> Bool {
+		switch kind {
+		case .cask, .formula:
+			return isValid(caskToken: name)
+		case .npmGlobal, .uvTool, .cargo, .macports, .nix:
+			guard !name.contains("..") else { return false }
+			return name.range(of: "^(@[a-zA-Z0-9._-]+/)?[a-zA-Z0-9@][a-zA-Z0-9@._+-]*$", options: .regularExpression) != nil
+		}
+	}
+	
 	/// Whether Homebrew already manages the cask. Homebrew keeps one folder per installed cask in its `Caskroom`.
 	static func isInstalled(caskToken token: String, in caskrooms: [URL] = prefixes.map { URL(fileURLWithPath: $0).appendingPathComponent("Caskroom") }) -> Bool {
 		guard isValid(caskToken: token) else { return false }
@@ -101,7 +134,7 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 	/// The arguments for upgrading a package in its respective package manager.
 	static func upgradeArguments(forToken token: String, kind: PackageKind) -> [String]? {
 		let (_, cleanName) = parsePackageToken(token)
-		guard isValid(caskToken: cleanName) else { return nil }
+		guard isValid(packageName: cleanName, for: kind) else { return nil }
 		switch kind {
 		case .cask:
 			return ["upgrade", "--cask", "--greedy", cleanName]
@@ -225,134 +258,135 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 		isAppAtURLInCaskroom(bundle.fileURL)
 	}
 	
-	/// Discovers user-installed Homebrew CLI formulae (`installed_on_request == true` in `INSTALL_RECEIPT.json`) from Homebrew's `Cellar`.
+	/// Discovers user-installed Homebrew CLI formulae (`installed_on_request == true` in `INSTALL_RECEIPT.json`) from Homebrew's `Cellar`,
+	/// plus packages from other installed package managers (`npm -g`, `uv`/`pipx`, `Cargo`, `MacPorts`, `Nix`).
 	static func collectInstalledFormulaBundles(in cellars: [URL] = prefixes.map { URL(fileURLWithPath: $0).appendingPathComponent("Cellar") }) -> [App.Bundle] {
-		guard brewURL != nil else { return [] }
 		let fm = FileManager.default
 		var results = [App.Bundle]()
 		var seenTokens = Set<String>()
 		
-		for cellar in cellars {
-			guard let formulaURLs = try? fm.contentsOfDirectory(at: cellar, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
-				continue
-			}
-			for formulaURL in formulaURLs {
-				let token = formulaURL.lastPathComponent
-				guard isValid(caskToken: token), !seenTokens.contains(token),
-					  let versionURLs = try? fm.contentsOfDirectory(at: formulaURL, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]),
-					  !versionURLs.isEmpty else {
+		if brewURL != nil {
+			for cellar in cellars {
+				guard let formulaURLs = try? fm.contentsOfDirectory(at: cellar, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
 					continue
 				}
-				// Pick the latest installed version directory in Cellar/<token>/
-				let sortedVersions = versionURLs.sorted { a, b in
-					VersionParser.parse(combinedVersionNumber: a.lastPathComponent) < VersionParser.parse(combinedVersionNumber: b.lastPathComponent)
-				}
-				guard let latestVersionURL = sortedVersions.last else { continue }
-				
-				let receiptURL = latestVersionURL.appendingPathComponent("INSTALL_RECEIPT.json")
-				guard let receiptData = try? Data(contentsOf: receiptURL),
-					  let receiptJSON = (try? JSONSerialization.jsonObject(with: receiptData)) as? [String: Any],
-					  (receiptJSON["installed_on_request"] as? Bool) == true else {
-					continue
-				}
-				
-				let installedVersionString = latestVersionURL.lastPathComponent
-				let version = VersionParser.parse(combinedVersionNumber: installedVersionString)
-				guard !version.isEmpty else { continue }
-				
-				let installTimestamp = (receiptJSON["time"] as? TimeInterval).map { Date(timeIntervalSince1970: $0) }
-				let modDate = installTimestamp ?? (try? latestVersionURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
-				
-				seenTokens.insert(token)
-				results.append(
-					App.Bundle(
-						version: version,
-						name: token,
-						bundleIdentifier: "sh.brew.formula.\(token)",
-						fileURL: formulaURL,
-						source: .homebrew,
-						homebrewFormulaToken: token,
-						modificationDate: modDate
+				for formulaURL in formulaURLs {
+					let token = formulaURL.lastPathComponent
+					guard isValid(caskToken: token), !seenTokens.contains(token),
+						  let versionURLs = try? fm.contentsOfDirectory(at: formulaURL, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]),
+						  !versionURLs.isEmpty else {
+						continue
+					}
+					// Pick the latest installed version directory in Cellar/<token>/
+					let sortedVersions = versionURLs.sorted { a, b in
+						VersionParser.parse(combinedVersionNumber: a.lastPathComponent) < VersionParser.parse(combinedVersionNumber: b.lastPathComponent)
+					}
+					guard let latestVersionURL = sortedVersions.last else { continue }
+					
+					let receiptURL = latestVersionURL.appendingPathComponent("INSTALL_RECEIPT.json")
+					guard let receiptData = try? Data(contentsOf: receiptURL),
+						  let receiptJSON = (try? JSONSerialization.jsonObject(with: receiptData)) as? [String: Any],
+						  (receiptJSON["installed_on_request"] as? Bool) == true else {
+						continue
+					}
+					
+					let installedVersionString = latestVersionURL.lastPathComponent
+					let version = VersionParser.parse(combinedVersionNumber: installedVersionString)
+					guard !version.isEmpty else { continue }
+					
+					let installTimestamp = (receiptJSON["time"] as? TimeInterval).map { Date(timeIntervalSince1970: $0) }
+					let modDate = installTimestamp ?? (try? latestVersionURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+					
+					seenTokens.insert(token)
+					results.append(
+						App.Bundle(
+							version: version,
+							name: token,
+							bundleIdentifier: "sh.brew.formula.\(token)",
+							fileURL: formulaURL,
+							source: .homebrew,
+							homebrewFormulaToken: token,
+							modificationDate: modDate
+						)
 					)
-				)
+				}
 			}
 		}
-		if AppListSettings.shared.includeAdditionalPackageManagers {
-			results.append(contentsOf: collectAdditionalPackageBundles())
-		}
+		results.append(contentsOf: collectAdditionalPackageBundles())
 		return results
 	}
 	
-	/// Discovers installed packages from MacPorts, Nix profiles, Cargo (`~/.cargo/.crates2.json`), and `uv` (`~/.local/share/uv/tools`)
-	/// when `includeAdditionalPackageManagers` is enabled in Settings.
+	/// Discovers installed packages from `npm -g`, `uv`/`pipx`, `Cargo` (`~/.cargo/.crates2.json`), `MacPorts`, and `Nix` profiles.
 	static func collectAdditionalPackageBundles(fileManager fm: FileManager = .default) -> [App.Bundle] {
 		var results = [App.Bundle]()
 		let home = fm.homeDirectoryForCurrentUser
 		
-		// 1. MacPorts (/opt/local/var/macports/software/<port>/<version>_0)
-		let macportsSoftware = URL(fileURLWithPath: "/opt/local/var/macports/software")
-		if executableURL(for: .macports, fileManager: fm) != nil,
-		   let portDirs = try? fm.contentsOfDirectory(at: macportsSoftware, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
-			for portURL in portDirs {
-				let name = portURL.lastPathComponent
-				guard isValid(caskToken: name),
-					  let verDirs = try? fm.contentsOfDirectory(at: portURL, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]),
-					  let latestURL = verDirs.last else { continue }
-				let rawVer = latestURL.lastPathComponent.split(separator: "_").first.map(String.init) ?? latestURL.lastPathComponent
-				let version = VersionParser.parse(combinedVersionNumber: rawVer)
-				guard !version.isEmpty else { continue }
-				let modDate = try? latestURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
-				results.append(
-					App.Bundle(
-						version: version,
-						name: name,
-						bundleIdentifier: "org.macports.port.\(name)",
-						fileURL: portURL,
-						source: .homebrew,
-						homebrewFormulaToken: "macports:\(name)",
-						modificationDate: modDate
+		// 1. Node.js Global CLI (npm -g: /opt/homebrew/lib/node_modules, /usr/local/lib/node_modules)
+		if executableURL(for: .npmGlobal, fileManager: fm) != nil {
+			var seenNPM = Set<String>()
+			let nodeModulesRoots = prefixes.map { URL(fileURLWithPath: $0).appendingPathComponent("lib/node_modules") }
+			for rootURL in nodeModulesRoots {
+				guard let entries = try? fm.contentsOfDirectory(at: rootURL, includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey], options: [.skipsHiddenFiles]) else {
+					continue
+				}
+				var candidateDirs = [URL]()
+				for entry in entries {
+					if entry.lastPathComponent.hasPrefix("@") {
+						if fm.fileExists(atPath: entry.appendingPathComponent("package.json").path) {
+							candidateDirs.append(entry)
+						} else if let scopedDirs = try? fm.contentsOfDirectory(at: entry, includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey], options: [.skipsHiddenFiles]) {
+							candidateDirs.append(contentsOf: scopedDirs)
+						}
+					} else {
+						candidateDirs.append(entry)
+					}
+				}
+				for pkgDir in candidateDirs {
+					let pkgJSONURL = pkgDir.appendingPathComponent("package.json")
+					guard let data = try? Data(contentsOf: pkgJSONURL),
+						  let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+						  let rawVer = json["version"] as? String else {
+						continue
+					}
+					let name = (json["name"] as? String) ?? pkgDir.lastPathComponent
+					// Skip bundled corepack/npm if desired? Keep user-visible packages; skip only internal corepack shim
+					guard name != "corepack",
+						  isValid(packageName: name, for: .npmGlobal),
+						  !seenNPM.contains(name) else {
+						continue
+					}
+					let version = VersionParser.parse(combinedVersionNumber: rawVer)
+					guard !version.isEmpty else { continue }
+					let modDate = try? pkgDir.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+					seenNPM.insert(name)
+					results.append(
+						App.Bundle(
+							version: version,
+							name: name,
+							bundleIdentifier: "com.npmjs.global.\(name)",
+							fileURL: pkgDir,
+							source: .homebrew,
+							homebrewFormulaToken: "npm:\(name)",
+							modificationDate: modDate
+						)
 					)
-				)
+				}
 			}
 		}
 		
-		// 2. Cargo (~/.cargo/.crates2.json)
-		let cargoCratesURL = home.appendingPathComponent(".cargo/.crates2.json")
-		if executableURL(for: .cargo, fileManager: fm) != nil,
-		   let data = try? Data(contentsOf: cargoCratesURL),
-		   let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-		   let installs = json["installs"] as? [String: Any] {
-			let modDate = try? cargoCratesURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
-			for key in installs.keys {
-				// Key format: "<crate> <version> (<source>)"
-				let parts = key.split(separator: " ")
-				guard parts.count >= 2 else { continue }
-				let name = String(parts[0])
-				let rawVer = String(parts[1])
-				guard isValid(caskToken: name) else { continue }
-				let version = VersionParser.parse(combinedVersionNumber: rawVer)
-				guard !version.isEmpty else { continue }
-				results.append(
-					App.Bundle(
-						version: version,
-						name: name,
-						bundleIdentifier: "org.rust-lang.cargo.\(name)",
-						fileURL: cargoCratesURL,
-						source: .homebrew,
-						homebrewFormulaToken: "cargo:\(name)",
-						modificationDate: modDate
-					)
-				)
+		// 2. Python CLI Tools: uv (~/.local/share/uv/tools/<tool>) & pipx (~/.local/share/pipx/venvs/<tool>)
+		let pythonToolRoots = [
+			home.appendingPathComponent(".local/share/uv/tools"),
+			home.appendingPathComponent(".local/share/pipx/venvs")
+		]
+		var seenUV = Set<String>()
+		for toolsDir in pythonToolRoots {
+			guard let toolDirs = try? fm.contentsOfDirectory(at: toolsDir, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]) else {
+				continue
 			}
-		}
-		
-		// 3. uv tools (~/.local/share/uv/tools/<tool>/uv-receipt.toml)
-		let uvToolsDir = home.appendingPathComponent(".local/share/uv/tools")
-		if executableURL(for: .uvTool, fileManager: fm) != nil,
-		   let toolDirs = try? fm.contentsOfDirectory(at: uvToolsDir, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]) {
 			for toolURL in toolDirs {
 				let name = toolURL.lastPathComponent
-				guard isValid(caskToken: name) else { continue }
+				guard isValid(packageName: name, for: .uvTool), !seenUV.contains(name) else { continue }
 				// Look for <name>-<version>.dist-info in lib/python*/site-packages/
 				let libDir = toolURL.appendingPathComponent("lib")
 				var foundVersion: Version?
@@ -373,6 +407,7 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 				}
 				guard let version = foundVersion else { continue }
 				let modDate = try? toolURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+				seenUV.insert(name)
 				results.append(
 					App.Bundle(
 						version: version,
@@ -387,38 +422,191 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 			}
 		}
 		
+		// 3. Cargo (~/.cargo/.crates2.json)
+		let cargoCratesURL = home.appendingPathComponent(".cargo/.crates2.json")
+		if executableURL(for: .cargo, fileManager: fm) != nil,
+		   let data = try? Data(contentsOf: cargoCratesURL),
+		   let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+		   let installs = json["installs"] as? [String: Any] {
+			let modDate = try? cargoCratesURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+			for key in installs.keys {
+				// Key format: "<crate> <version> (<source>)"
+				let parts = key.split(separator: " ")
+				guard parts.count >= 2 else { continue }
+				let name = String(parts[0])
+				let rawVer = String(parts[1])
+				guard isValid(packageName: name, for: .cargo) else { continue }
+				let version = VersionParser.parse(combinedVersionNumber: rawVer)
+				guard !version.isEmpty else { continue }
+				results.append(
+					App.Bundle(
+						version: version,
+						name: name,
+						bundleIdentifier: "org.rust-lang.cargo.\(name)",
+						fileURL: cargoCratesURL,
+						source: .homebrew,
+						homebrewFormulaToken: "cargo:\(name)",
+						modificationDate: modDate
+					)
+				)
+			}
+		}
+		
+		// 4. MacPorts (/opt/local/var/macports/software/<port>/<version>_0)
+		let macportsSoftware = URL(fileURLWithPath: "/opt/local/var/macports/software")
+		if executableURL(for: .macports, fileManager: fm) != nil,
+		   let portDirs = try? fm.contentsOfDirectory(at: macportsSoftware, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+			for portURL in portDirs {
+				let name = portURL.lastPathComponent
+				guard isValid(packageName: name, for: .macports),
+					  let verDirs = try? fm.contentsOfDirectory(at: portURL, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]),
+					  let latestURL = verDirs.last else { continue }
+				let rawVer = latestURL.lastPathComponent.split(separator: "_").first.map(String.init) ?? latestURL.lastPathComponent
+				let version = VersionParser.parse(combinedVersionNumber: rawVer)
+				guard !version.isEmpty else { continue }
+				let modDate = try? latestURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+				results.append(
+					App.Bundle(
+						version: version,
+						name: name,
+						bundleIdentifier: "org.macports.port.\(name)",
+						fileURL: portURL,
+						source: .homebrew,
+						homebrewFormulaToken: "macports:\(name)",
+						modificationDate: modDate
+					)
+				)
+			}
+		}
+		
+		// 5. Nix Profiles (~/.local/state/nix/profiles/profile/manifest.json, ~/.nix-profile/manifest.json)
+		let nixManifests = [
+			home.appendingPathComponent(".local/state/nix/profiles/profile/manifest.json"),
+			home.appendingPathComponent(".nix-profile/manifest.json")
+		]
+		if executableURL(for: .nix, fileManager: fm) != nil {
+			var seenNix = Set<String>()
+			for manifestURL in nixManifests {
+				guard let data = try? Data(contentsOf: manifestURL),
+					  let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+					  let elements = json["elements"] as? [String: Any] else {
+					continue
+				}
+				let modDate = try? manifestURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+				for (pkgName, value) in elements {
+					guard isValid(packageName: pkgName, for: .nix), !seenNix.contains(pkgName) else { continue }
+					let dict = value as? [String: Any]
+					let rawVer = (dict?["version"] as? String) ?? "1.0"
+					let version = VersionParser.parse(combinedVersionNumber: rawVer)
+					guard !version.isEmpty else { continue }
+					seenNix.insert(pkgName)
+					results.append(
+						App.Bundle(
+							version: version,
+							name: pkgName,
+							bundleIdentifier: "org.nixos.nix.\(pkgName)",
+							fileURL: manifestURL,
+							source: .homebrew,
+							homebrewFormulaToken: "nix:\(pkgName)",
+							modificationDate: modDate
+						)
+					)
+				}
+			}
+		}
+		
 		return results
 	}
 	
-	/// Extracts `desc`, `homepage`, and `sourceURL` from the formula's `.brew/<token>.rb` metadata file in `Cellar`.
+	/// Extracts `description`, `homepage`, and `sourceURL` from the package's local metadata
+	/// (`.brew/<token>.rb` for Homebrew formulae, `package.json` for `npm -g`, and `.dist-info/METADATA` for `uv`/`pipx`).
 	static func formulaMetadata(for bundle: App.Bundle) -> (description: String?, homepage: String?, sourceURL: String?) {
-		guard let token = bundle.homebrewFormulaToken else { return (nil, nil, nil) }
+		guard let rawToken = bundle.homebrewFormulaToken else { return (nil, nil, nil) }
+		let parsed = parsePackageToken(rawToken)
 		let fm = FileManager.default
-		guard let versionURLs = try? fm.contentsOfDirectory(at: bundle.fileURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]),
-			  let latestVersionURL = versionURLs.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }).last else {
-			return (nil, nil, nil)
-		}
-		let rbURL = latestVersionURL.appendingPathComponent(".brew/\(token).rb")
-		guard let contents = try? String(contentsOf: rbURL, encoding: .utf8) else {
-			return (nil, nil, nil)
-		}
-		var desc: String?
-		var homepage: String?
-		var sourceURL: String?
-		for rawLine in contents.components(separatedBy: .newlines) {
-			let line = rawLine.trimmingCharacters(in: .whitespaces)
-			if desc == nil, line.hasPrefix("desc \""), line.hasSuffix("\"") {
-				desc = String(line.dropFirst(6).dropLast(1))
-			} else if homepage == nil, line.hasPrefix("homepage \""), line.hasSuffix("\"") {
-				homepage = String(line.dropFirst(10).dropLast(1))
-			} else if sourceURL == nil, line.hasPrefix("url \""), let endQuote = line.dropFirst(5).firstIndex(of: "\"") {
-				sourceURL = String(line.dropFirst(5)[..<endQuote])
-			} else if sourceURL == nil, line.hasPrefix("head \""), let endQuote = line.dropFirst(6).firstIndex(of: "\"") {
-				sourceURL = String(line.dropFirst(6)[..<endQuote])
+		
+		switch parsed.kind {
+		case .npmGlobal:
+			let pkgJSONURL = bundle.fileURL.appendingPathComponent("package.json")
+			guard let data = try? Data(contentsOf: pkgJSONURL),
+				  let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+				return (nil, nil, nil)
 			}
-			if desc != nil && homepage != nil && sourceURL != nil { break }
+			let desc = json["description"] as? String
+			let homepage = json["homepage"] as? String
+			var repoURL: String?
+			if let repoStr = json["repository"] as? String {
+				repoURL = repoStr
+			} else if let repoDict = json["repository"] as? [String: Any], let url = repoDict["url"] as? String {
+				repoURL = url
+			}
+			return (desc, homepage, repoURL)
+			
+		case .uvTool:
+			let libDir = bundle.fileURL.appendingPathComponent("lib")
+			guard let pyDirs = try? fm.contentsOfDirectory(at: libDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]),
+				  let pyDir = pyDirs.first else {
+				return (nil, nil, nil)
+			}
+			let sitePackages = pyDir.appendingPathComponent("site-packages")
+			guard let entries = try? fm.contentsOfDirectory(at: sitePackages, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else {
+				return (nil, nil, nil)
+			}
+			let normalizedPrefix = parsed.name.replacingOccurrences(of: "-", with: "_").lowercased() + "-"
+			guard let distInfo = entries.first(where: { $0.lastPathComponent.lowercased().hasPrefix(normalizedPrefix) && $0.lastPathComponent.hasSuffix(".dist-info") }),
+				  let metadataText = try? String(contentsOf: distInfo.appendingPathComponent("METADATA"), encoding: .utf8) else {
+				return (nil, nil, nil)
+			}
+			var desc: String?
+			var homepage: String?
+			var sourceURL: String?
+			for rawLine in metadataText.components(separatedBy: .newlines) {
+				if rawLine.isEmpty { break } // Stop at body after RFC822 headers
+				if desc == nil, rawLine.hasPrefix("Summary: ") {
+					desc = String(rawLine.dropFirst("Summary: ".count)).trimmingCharacters(in: .whitespaces)
+				} else if homepage == nil, rawLine.hasPrefix("Home-page: ") {
+					let val = String(rawLine.dropFirst("Home-page: ".count)).trimmingCharacters(in: .whitespaces)
+					if val.lowercased() != "unknown" { homepage = val }
+				} else if rawLine.hasPrefix("Project-URL: ") {
+					let val = String(rawLine.dropFirst("Project-URL: ".count))
+					if let httpRange = val.range(of: "https://") {
+						let urlStr = String(val[httpRange.lowerBound...]).trimmingCharacters(in: .whitespaces)
+						if homepage == nil { homepage = urlStr }
+						if sourceURL == nil && urlStr.lowercased().contains("github.com/") {
+							sourceURL = urlStr
+						}
+					}
+				}
+			}
+			return (desc, homepage, sourceURL)
+			
+		default:
+			guard let versionURLs = try? fm.contentsOfDirectory(at: bundle.fileURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]),
+				  let latestVersionURL = versionURLs.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }).last else {
+				return (nil, nil, nil)
+			}
+			let rbURL = latestVersionURL.appendingPathComponent(".brew/\(parsed.name).rb")
+			guard let contents = try? String(contentsOf: rbURL, encoding: .utf8) else {
+				return (nil, nil, nil)
+			}
+			var desc: String?
+			var homepage: String?
+			var sourceURL: String?
+			for rawLine in contents.components(separatedBy: .newlines) {
+				let line = rawLine.trimmingCharacters(in: .whitespaces)
+				if desc == nil, line.hasPrefix("desc \""), line.hasSuffix("\"") {
+					desc = String(line.dropFirst(6).dropLast(1))
+				} else if homepage == nil, line.hasPrefix("homepage \""), line.hasSuffix("\"") {
+					homepage = String(line.dropFirst(10).dropLast(1))
+				} else if sourceURL == nil, line.hasPrefix("url \""), let endQuote = line.dropFirst(5).firstIndex(of: "\"") {
+					sourceURL = String(line.dropFirst(5)[..<endQuote])
+				} else if sourceURL == nil, line.hasPrefix("head \""), let endQuote = line.dropFirst(6).firstIndex(of: "\"") {
+					sourceURL = String(line.dropFirst(6)[..<endQuote])
+				}
+				if desc != nil && homepage != nil && sourceURL != nil { break }
+			}
+			return (desc, homepage, sourceURL)
 		}
-		return (desc, homepage, sourceURL)
 	}
 	
 	private struct BrewOutdatedResponse: Decodable {
@@ -435,20 +623,31 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 		let casks: [CaskItem]?
 	}
 	
-	/// Refreshes the cached Caskroom mapping and `brew outdated --json=v2` state once per update check pass.
+	/// Builds an environment dictionary with `/opt/homebrew/bin` and `/usr/local/bin` in `PATH` so shebang scripts like `npm` (`#!/usr/bin/env node`) work inside a macOS GUI app.
+	private static func buildCLIEnvironment() -> [String: String] {
+		var env = ProcessInfo.processInfo.environment
+		let existingPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+		let home = FileManager.default.homeDirectoryForCurrentUser.path
+		env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(home)/.local/bin:\(home)/.cargo/bin:/opt/local/bin:\(existingPath)"
+		env["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+		env["HOMEBREW_NO_INSTALL_CLEANUP"] = "1"
+		env["NONINTERACTIVE"] = "1"
+		return env
+	}
+	
+	/// Refreshes the cached Caskroom mapping and outdated package state (`brew outdated --json=v2`, `npm outdated -g --json`, and PyPI for `uv`/`pipx`) once per update check pass.
 	static func refreshOutdatedPackagesCache() {
 		let freshMapping = caskroomAppMapping()
 		var formulaeMap = [String: String]()
 		var casksMap = [String: String]()
+		let cliEnv = buildCLIEnvironment()
 		
+		// 1. Homebrew (`brew outdated --json=v2`)
 		if let brew = brewURL {
 			let process = Process()
 			process.executableURL = brew
 			process.arguments = ["outdated", "--json=v2"]
-			var env = ProcessInfo.processInfo.environment
-			env["HOMEBREW_NO_AUTO_UPDATE"] = "1"
-			env["NONINTERACTIVE"] = "1"
-			process.environment = env
+			process.environment = cliEnv
 			let outPipe = Pipe()
 			process.standardOutput = outPipe
 			process.standardError = Pipe()
@@ -467,6 +666,62 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 					}
 				}
 			}
+		}
+		
+		// 2. Node.js Global CLI (`npm outdated -g --json` — note: exits with code 1 when outdated packages exist)
+		if let npmURL = executableURL(for: .npmGlobal) {
+			let process = Process()
+			process.executableURL = npmURL
+			process.arguments = ["outdated", "-g", "--json"]
+			process.environment = cliEnv
+			let outPipe = Pipe()
+			process.standardOutput = outPipe
+			process.standardError = Pipe()
+			if (try? process.run()) != nil {
+				let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+				process.waitUntilExit()
+				if !data.isEmpty,
+				   let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+					for (pkgName, infoAny) in json {
+						if let info = infoAny as? [String: Any],
+						   let latest = info["latest"] as? String, !latest.isEmpty {
+							formulaeMap["npm:\(pkgName)"] = latest
+						}
+					}
+				}
+			}
+		}
+		
+		// 3. Python CLI (`uv` / `pipx` tools via PyPI JSON API)
+		let additionalBundles = collectAdditionalPackageBundles()
+		let uvBundles = additionalBundles.filter { ($0.homebrewFormulaToken ?? "").hasPrefix("uv:") }
+		if !uvBundles.isEmpty {
+			let group = DispatchGroup()
+			let lock = NSLock()
+			for bundle in uvBundles {
+				guard let rawToken = bundle.homebrewFormulaToken else { continue }
+				let (_, cleanName) = parsePackageToken(rawToken)
+				guard let url = URL(string: "https://pypi.org/pypi/\(cleanName)/json") else { continue }
+				group.enter()
+				var request = URLRequest(url: url, timeoutInterval: 4.0)
+				request.setValue("PastDue/1.0", forHTTPHeaderField: "User-Agent")
+				URLSession.shared.dataTask(with: request) { data, _, _ in
+					defer { group.leave() }
+					guard let data,
+						  let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+						  let info = json["info"] as? [String: Any],
+						  let latest = info["version"] as? String, !latest.isEmpty else {
+						return
+					}
+					let parsedLatest = VersionParser.parse(combinedVersionNumber: latest)
+					if parsedLatest > bundle.version {
+						lock.lock()
+						formulaeMap["uv:\(cleanName)"] = latest
+						lock.unlock()
+					}
+				}.resume()
+			}
+			_ = group.wait(timeout: .now() + 5.0)
 		}
 		
 		cacheLock.lock()
@@ -500,7 +755,7 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 		
 		guard let executable = Self.executableURL(for: packageKind),
 			  let arguments = Self.upgradeArguments(forToken: packageToken, kind: packageKind) else {
-			finish(with: LatestError.custom(title: NSLocalizedString("HomebrewNotInstalledError", value: "Homebrew is not installed", comment: "Error title when an app should be updated through Homebrew, but Homebrew is missing."), description: nil))
+			finish(with: LatestError.custom(title: NSLocalizedString("HomebrewNotInstalledError", value: "Package manager is not installed", comment: "Error title when an app should be updated through Homebrew or another package manager, but the executable is missing."), description: nil))
 			return
 		}
 		
@@ -508,12 +763,7 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 		let process = Process()
 		process.executableURL = executable
 		process.arguments = arguments
-		
-		var environment = ProcessInfo.processInfo.environment
-		environment["HOMEBREW_NO_AUTO_UPDATE"] = "1"
-		environment["HOMEBREW_NO_INSTALL_CLEANUP"] = "1"
-		environment["NONINTERACTIVE"] = "1"
-		process.environment = environment
+		process.environment = Self.buildCLIEnvironment()
 		
 		let pipe = Pipe()
 		process.standardOutput = pipe

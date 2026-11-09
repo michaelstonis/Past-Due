@@ -39,6 +39,15 @@ class SparkleUpdateOperation: UpdateOperation, @unchecked Sendable {
 	override func execute() {
 		super.execute()
 		
+		// If updating Past Due itself, present Past Due's own interactive Sparkle update dialog separately
+		if self.bundleIdentifier == Bundle.main.bundleIdentifier {
+			AppDelegate.presentSelfUpdateDialog()
+			DispatchQueue.main.async {
+				self.finish()
+			}
+			return
+		}
+		
 		// Gather app and app bundle
 		guard let bundle = Bundle(path: self.bundleURL.path) else {
 			self.finish(with: LatestError.updateInfoUnavailable)

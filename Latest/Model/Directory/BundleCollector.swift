@@ -46,7 +46,7 @@ enum BundleCollector {
 	// MARK: - Utilities
 		
 	/// Returns a bundle representation for the app at the given url, without Spotlight Metadata.
-	static private func bundle(forAppAt url: URL) -> App.Bundle? {
+	static func bundle(forAppAt url: URL) -> App.Bundle? {
 		guard let appBundle = Bundle(url: url),
 			  let buildNumber = appBundle.uncachedBundleVersion,
 			  let identifier = appBundle.bundleIdentifier,

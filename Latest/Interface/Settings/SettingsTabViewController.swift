@@ -63,9 +63,7 @@ class SettingsTabViewController: NSTabViewController {
 	private lazy var tabViewSizes: [NSTabViewItem: NSSize] = [:]
 	
 	private func prepareForPresentation(of tabViewItem: NSTabViewItem?) {
-		(tabViewItem?.viewController as? SettingsTabItemViewController)?.prepareForAnimation()
-
-		// Cache the size of the tab item
+		// Cache the size of the tab item while required bottom/trailing constraints are still active
 		if let tabViewItem = tabViewItem, let view = tabViewItem.view {
 			view.layoutSubtreeIfNeeded()
 			let fitting = view.fittingSize
@@ -74,6 +72,8 @@ class SettingsTabViewController: NSTabViewController {
 				height: max(view.frame.size.height, fitting.height)
 			)
 		}
+
+		(tabViewItem?.viewController as? SettingsTabItemViewController)?.prepareForAnimation()
 	}
 	
 	private func commitPresentation(of tabViewItem: NSTabViewItem?, animated: Bool) {

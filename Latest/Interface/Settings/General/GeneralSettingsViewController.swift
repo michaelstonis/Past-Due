@@ -12,7 +12,11 @@ import AppKit
 class GeneralSettingsViewController: SettingsTabItemViewController {
 	
 	private var includeHomebrewCheckbox: NSButton?
-	private var includeAdditionalPackagesCheckbox: NSButton?
+	private var includeNPMCheckbox: NSButton?
+	private var includeUVCheckbox: NSButton?
+	private var includeCargoCheckbox: NSButton?
+	private var includeMacPortsCheckbox: NSButton?
+	private var includeNixCheckbox: NSButton?
 	private var automaticChecksCheckbox: NSButton?
 	private var intervalPopUpButton: NSPopUpButton?
 	private var notificationsCheckbox: NSButton?
@@ -80,42 +84,73 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 			return label
 		}
 		
+		let pkgSeparator = NSBox()
+		pkgSeparator.boxType = .separator
+		let pkgSeparatorRow = gridView.addRow(with: [NSGridCell.emptyContentView, pkgSeparator])
+		pkgSeparatorRow.topPadding = 10
+		pkgSeparatorRow.bottomPadding = 6
+		pkgSeparatorRow.mergeCells(in: NSRange(location: 0, length: 2))
+		
+		let packagesLabel = makeSectionLabel(NSLocalizedString("PackagesSectionLabel", value: "Packages:", comment: "Label in General settings for package manager toggles."))
+		
 		let homebrewButton = NSButton(
-			checkboxWithTitle: NSLocalizedString("IncludeHomebrewUpdatesTitle", value: "Homebrew packages (Casks & CLI Formulae)", comment: "Checkbox title to include Homebrew-managed apps and formulae in the Homebrew sidebar pane."),
+			checkboxWithTitle: NSLocalizedString("IncludeHomebrewUpdatesTitle", value: "Homebrew (Casks & CLI Formulae)", comment: "Checkbox title to include Homebrew-managed apps and formulae in the sidebar."),
 			target: self,
 			action: #selector(toggleIncludeHomebrewUpdates(_:))
 		)
 		self.includeHomebrewCheckbox = homebrewButton
-		let homebrewRow = gridView.addRow(with: [NSGridCell.emptyContentView, homebrewButton])
-		homebrewRow.topPadding = 6
+		let homebrewRow = gridView.addRow(with: [packagesLabel, homebrewButton])
 		homebrewRow.cell(at: 1).xPlacement = .leading
 		
-		let homebrewDescContainer = NSView()
-		homebrewDescContainer.translatesAutoresizingMaskIntoConstraints = false
-		let homebrewDescLabel = NSTextField(wrappingLabelWithString: NSLocalizedString("IncludeHomebrewUpdatesDescription", value: "Show Homebrew-managed apps and command-line formulae in the lower Homebrew sidebar section.", comment: "Description below the Homebrew packages checkbox in General settings."))
-		homebrewDescLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-		homebrewDescLabel.textColor = .secondaryLabelColor
-		homebrewDescLabel.translatesAutoresizingMaskIntoConstraints = false
-		homebrewDescContainer.addSubview(homebrewDescLabel)
-		NSLayoutConstraint.activate([
-			homebrewDescLabel.leadingAnchor.constraint(equalTo: homebrewDescContainer.leadingAnchor, constant: 18),
-			homebrewDescLabel.trailingAnchor.constraint(equalTo: homebrewDescContainer.trailingAnchor),
-			homebrewDescLabel.topAnchor.constraint(equalTo: homebrewDescContainer.topAnchor),
-			homebrewDescLabel.bottomAnchor.constraint(equalTo: homebrewDescContainer.bottomAnchor),
-			homebrewDescLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 330)
-		])
-		let homebrewDescRow = gridView.addRow(with: [NSGridCell.emptyContentView, homebrewDescContainer])
-		homebrewDescRow.cell(at: 1).xPlacement = .leading
-		
-		let extraPkgButton = NSButton(
-			checkboxWithTitle: NSLocalizedString("IncludeAdditionalPackageManagersTitle", value: "Other package managers (MacPorts, Nix, Cargo, uv, npm)", comment: "Checkbox title to include MacPorts, Nix, and global developer CLI packages."),
+		let npmButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("IncludeNPMUpdatesTitle", value: "Node.js Global CLI (npm -g)", comment: "Checkbox title to include global npm packages in the sidebar."),
 			target: self,
-			action: #selector(toggleIncludeAdditionalPackageManagers(_:))
+			action: #selector(toggleIncludeNPMUpdates(_:))
 		)
-		self.includeAdditionalPackagesCheckbox = extraPkgButton
-		let extraPkgRow = gridView.addRow(with: [NSGridCell.emptyContentView, extraPkgButton])
-		extraPkgRow.topPadding = 6
-		extraPkgRow.cell(at: 1).xPlacement = .leading
+		self.includeNPMCheckbox = npmButton
+		let npmRow = gridView.addRow(with: [NSGridCell.emptyContentView, npmButton])
+		npmRow.topPadding = 2
+		npmRow.cell(at: 1).xPlacement = .leading
+		
+		let uvButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("IncludeUVUpdatesTitle", value: "Python CLI Tools (uv / pipx)", comment: "Checkbox title to include uv and pipx Python CLI tools in the sidebar."),
+			target: self,
+			action: #selector(toggleIncludeUVUpdates(_:))
+		)
+		self.includeUVCheckbox = uvButton
+		let uvRow = gridView.addRow(with: [NSGridCell.emptyContentView, uvButton])
+		uvRow.topPadding = 2
+		uvRow.cell(at: 1).xPlacement = .leading
+		
+		let cargoButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("IncludeCargoUpdatesTitle", value: "Rust CLI Crates (Cargo)", comment: "Checkbox title to include Cargo crates in the sidebar."),
+			target: self,
+			action: #selector(toggleIncludeCargoUpdates(_:))
+		)
+		self.includeCargoCheckbox = cargoButton
+		let cargoRow = gridView.addRow(with: [NSGridCell.emptyContentView, cargoButton])
+		cargoRow.topPadding = 2
+		cargoRow.cell(at: 1).xPlacement = .leading
+		
+		let macportsButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("IncludeMacPortsUpdatesTitle", value: "MacPorts (port)", comment: "Checkbox title to include MacPorts packages in the sidebar."),
+			target: self,
+			action: #selector(toggleIncludeMacPortsUpdates(_:))
+		)
+		self.includeMacPortsCheckbox = macportsButton
+		let macportsRow = gridView.addRow(with: [NSGridCell.emptyContentView, macportsButton])
+		macportsRow.topPadding = 2
+		macportsRow.cell(at: 1).xPlacement = .leading
+		
+		let nixButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("IncludeNixUpdatesTitle", value: "Nix Packages (nix profile)", comment: "Checkbox title to include Nix profile packages in the sidebar."),
+			target: self,
+			action: #selector(toggleIncludeNixUpdates(_:))
+		)
+		self.includeNixCheckbox = nixButton
+		let nixRow = gridView.addRow(with: [NSGridCell.emptyContentView, nixButton])
+		nixRow.topPadding = 2
+		nixRow.cell(at: 1).xPlacement = .leading
 		
 		let separator = NSBox()
 		separator.boxType = .separator
@@ -204,7 +239,11 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 	
 	private func refreshBackgroundUpdateControls() {
 		includeHomebrewCheckbox?.state = AppListSettings.shared.includeHomebrewUpdates ? .on : .off
-		includeAdditionalPackagesCheckbox?.state = AppListSettings.shared.includeAdditionalPackageManagers ? .on : .off
+		includeNPMCheckbox?.state = AppListSettings.shared.includeNPMUpdates ? .on : .off
+		includeUVCheckbox?.state = AppListSettings.shared.includeUVUpdates ? .on : .off
+		includeCargoCheckbox?.state = AppListSettings.shared.includeCargoUpdates ? .on : .off
+		includeMacPortsCheckbox?.state = AppListSettings.shared.includeMacPortsUpdates ? .on : .off
+		includeNixCheckbox?.state = AppListSettings.shared.includeNixUpdates ? .on : .off
 		
 		let settings = BackgroundCheckSettings.shared
 		let enabled = settings.automaticChecksEnabled
@@ -230,8 +269,28 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		AppListSettings.shared.includeHomebrewUpdates = (sender.state == .on)
 	}
 	
-	@objc private func toggleIncludeAdditionalPackageManagers(_ sender: NSButton) {
-		AppListSettings.shared.includeAdditionalPackageManagers = (sender.state == .on)
+	@objc private func toggleIncludeNPMUpdates(_ sender: NSButton) {
+		AppListSettings.shared.includeNPMUpdates = (sender.state == .on)
+		UpdateCheckCoordinator.shared.refreshAfterHomebrewUpgrade()
+	}
+	
+	@objc private func toggleIncludeUVUpdates(_ sender: NSButton) {
+		AppListSettings.shared.includeUVUpdates = (sender.state == .on)
+		UpdateCheckCoordinator.shared.refreshAfterHomebrewUpgrade()
+	}
+	
+	@objc private func toggleIncludeCargoUpdates(_ sender: NSButton) {
+		AppListSettings.shared.includeCargoUpdates = (sender.state == .on)
+		UpdateCheckCoordinator.shared.refreshAfterHomebrewUpgrade()
+	}
+	
+	@objc private func toggleIncludeMacPortsUpdates(_ sender: NSButton) {
+		AppListSettings.shared.includeMacPortsUpdates = (sender.state == .on)
+		UpdateCheckCoordinator.shared.refreshAfterHomebrewUpgrade()
+	}
+	
+	@objc private func toggleIncludeNixUpdates(_ sender: NSButton) {
+		AppListSettings.shared.includeNixUpdates = (sender.state == .on)
 		UpdateCheckCoordinator.shared.refreshAfterHomebrewUpgrade()
 	}
 	

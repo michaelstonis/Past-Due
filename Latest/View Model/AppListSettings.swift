@@ -13,6 +13,11 @@ private let ShowIgnoredUpdatesKey = "ShowIgnoredUpdatesKey"
 private let IncludeUnsupportedAppsKey = "ShowUnsupportedUpdatesKey"
 private let IncludeAppsWithLimitedSupportKey = "IncludeAppsWithLimitedSupportKey"
 private let IncludeHomebrewUpdatesKey = "IncludeHomebrewUpdatesKey"
+private let IncludeMacPortsUpdatesKey = "IncludeMacPortsUpdatesKey"
+private let IncludeNixUpdatesKey = "IncludeNixUpdatesKey"
+private let IncludeUVUpdatesKey = "IncludeUVUpdatesKey"
+private let IncludeNPMUpdatesKey = "IncludeNPMUpdatesKey"
+private let IncludeCargoUpdatesKey = "IncludeCargoUpdatesKey"
 private let IncludeAdditionalPackageManagersKey = "IncludeAdditionalPackageManagersKey"
 
 /// Observable front end to app list preferences.
@@ -45,11 +50,17 @@ struct AppListSettings: Observable {
 	var observers = [UUID : ObservationHandler]()
 
 	private init() {
-		// Show installed updates, apps with limited support, and Homebrew packages by default
+		// Show installed updates, apps with limited support, and package managers by default
 		UserDefaults.standard.register(defaults: [
 			ShowInstalledUpdatesKey: true,
 			IncludeAppsWithLimitedSupportKey: true,
-			IncludeHomebrewUpdatesKey: true
+			IncludeHomebrewUpdatesKey: true,
+			IncludeMacPortsUpdatesKey: true,
+			IncludeNixUpdatesKey: true,
+			IncludeUVUpdatesKey: true,
+			IncludeNPMUpdatesKey: true,
+			IncludeCargoUpdatesKey: true,
+			IncludeAdditionalPackageManagersKey: true
 		])
 	}
 	
@@ -123,14 +134,49 @@ struct AppListSettings: Observable {
 		}
 	}
 	
-	/// Whether additional package managers (MacPorts, Nix, Cargo, uv, npm -g) should be discovered and shown in the lower package manager section.
+	/// Whether MacPorts packages (`port`) should be shown in the left side panel.
+	var includeMacPortsUpdates: Bool {
+		set { set(newValue, forKey: IncludeMacPortsUpdatesKey) }
+		get { UserDefaults.standard.bool(forKey: IncludeMacPortsUpdatesKey) }
+	}
+	
+	/// Whether Nix profile packages (`nix profile`) should be shown in the left side panel.
+	var includeNixUpdates: Bool {
+		set { set(newValue, forKey: IncludeNixUpdatesKey) }
+		get { UserDefaults.standard.bool(forKey: IncludeNixUpdatesKey) }
+	}
+	
+	/// Whether Python CLI tools (`uv` / `pipx`) should be shown in the left side panel.
+	var includeUVUpdates: Bool {
+		set { set(newValue, forKey: IncludeUVUpdatesKey) }
+		get { UserDefaults.standard.bool(forKey: IncludeUVUpdatesKey) }
+	}
+	
+	/// Whether global Node.js CLI packages (`npm -g`) should be shown in the left side panel.
+	var includeNPMUpdates: Bool {
+		set { set(newValue, forKey: IncludeNPMUpdatesKey) }
+		get { UserDefaults.standard.bool(forKey: IncludeNPMUpdatesKey) }
+	}
+	
+	/// Whether Rust CLI crates (`cargo`) should be shown in the left side panel.
+	var includeCargoUpdates: Bool {
+		set { set(newValue, forKey: IncludeCargoUpdatesKey) }
+		get { UserDefaults.standard.bool(forKey: IncludeCargoUpdatesKey) }
+	}
+	
+	/// Convenience property that toggles or checks whether any additional package manager is enabled.
 	var includeAdditionalPackageManagers: Bool {
 		set {
 			set(newValue, forKey: IncludeAdditionalPackageManagersKey)
+			set(newValue, forKey: IncludeMacPortsUpdatesKey)
+			set(newValue, forKey: IncludeNixUpdatesKey)
+			set(newValue, forKey: IncludeUVUpdatesKey)
+			set(newValue, forKey: IncludeNPMUpdatesKey)
+			set(newValue, forKey: IncludeCargoUpdatesKey)
 		}
 		
 		get {
-			UserDefaults.standard.bool(forKey: IncludeAdditionalPackageManagersKey)
+			includeMacPortsUpdates || includeNixUpdates || includeUVUpdates || includeNPMUpdates || includeCargoUpdates
 		}
 	}
 	

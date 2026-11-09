@@ -18,8 +18,15 @@ class AppLibrary {
 	let observationFailureHandler: ObservationFailureHandler
 	
 	/// A list of all application bundles (and user-installed Homebrew CLI formulae) that are available locally.
+	/// Always represents Past Due itself using the currently running `Bundle.main` bundle so self-updates match the running app version.
 	var bundles: [App.Bundle] {
-		directories.flatMap { $0.value.bundles } + HomebrewUpdateOperation.collectInstalledFormulaBundles()
+		var collected = directories.flatMap { $0.value.bundles }
+		if let selfID = Bundle.main.bundleIdentifier,
+		   let runningSelfBundle = BundleCollector.bundle(forAppAt: Bundle.main.bundleURL) {
+			collected.removeAll { $0.bundleIdentifier == selfID }
+			collected.append(runningSelfBundle)
+		}
+		return collected + HomebrewUpdateOperation.collectInstalledFormulaBundles()
 	}
 		
 	private var directories = [URL: AppDirectory]()

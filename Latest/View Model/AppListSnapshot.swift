@@ -26,9 +26,9 @@ struct AppListSnapshot {
 		self.apps = apps
 		let showExternal = AppListSettings.shared.includeAppsWithLimitedSupport
 		let regularApps = apps.filter { !$0.isManagedByHomebrew }
-		let homebrewApps = AppListSettings.shared.includeHomebrewUpdates ? apps.filter { $0.isManagedByHomebrew } : []
+		let homebrewApps = apps.filter { $0.isManagedByHomebrew && $0.isPackageSourceEnabled }
 		self.entries = Self.generateEntries(from: regularApps, filterQuery: filterQuery)
-		self.homebrewEntries = Self.generateEntries(from: homebrewApps, filterQuery: filterQuery)
+		self.homebrewEntries = Self.generatePackageEntries(from: homebrewApps, filterQuery: filterQuery)
 		self.regularAvailableUpdateCount = regularApps.filter { $0.updateAvailable && !$0.isIgnored && (showExternal || $0.usesBuiltInUpdater) }.count
 		self.homebrewAvailableUpdateCount = homebrewApps.filter { $0.updateAvailable && !$0.isIgnored }.count
 	}
@@ -134,6 +134,68 @@ struct AppListSnapshot {
 		}
 		
 		return availableUpdates + installedUpdates + ignoredUpdates
+	}
+	
+	/// Builds the lower sidebar entries grouped by package manager source (`Homebrew`, `Node.js CLI (npm)`, `Python CLI (uv / pipx)`, `Rust CLI (Cargo)`, `MacPorts`, `Nix`),
+	/// with available updates separated above installed packages within each source.
+	private static func generatePackageEntries(from apps: [App], filterQuery: String?) -> [Entry] {
+		let visibleApps = apps.filter { app in
+			if let filterQuery = filterQuery, !app.name.localizedCaseInsensitiveContains(filterQuery) {
+				return false
+			}
+			if !AppListSettings.shared.showInstalledUpdates && !(app.updateAvailable || app.isIgnored) {
+				return false
+			}
+			if !AppListSettings.shared.showIgnoredUpdates && app.isIgnored {
+				return false
+			}
+			return true
+		}
+		
+		let orderedGroups: [String] = [
+			"Homebrew",
+			"Node.js CLI (npm)",
+			"Python CLI (uv / pipx)",
+			"Rust CLI (Cargo)",
+			"MacPorts",
+			"Nix"
+		]
+		
+		var availableSections = [Entry]()
+		var installedSections = [Entry]()
+		var ignoredSections = [Entry]()
+		
+		for groupTitle in orderedGroups {
+			let groupApps = visibleApps.filter { ($0.packageKind?.sectionTitle ?? "Homebrew") == groupTitle }
+			guard !groupApps.isEmpty else { continue }
+			
+			let sorted = groupApps.sorted { app1, app2 in
+				let lower1 = app1.name.lowercased()
+				let lower2 = app2.name.lowercased()
+				if lower1 != lower2 { return lower1 < lower2 }
+				return app1.fileURL.path < app2.fileURL.path
+			}
+			
+			let available = sorted.filter { $0.updateAvailable && !$0.isIgnored }
+			if !available.isEmpty {
+				let sectionTitle = "\(groupTitle) Updates"
+				availableSections.append(.section(Section(title: sectionTitle, shortTitle: groupTitle, numberOfApps: available.count)))
+				availableSections.append(contentsOf: available.map { Entry.app($0) })
+			}
+			
+			let installed = sorted.filter { !$0.updateAvailable && !$0.isIgnored }
+			if !installed.isEmpty {
+				installedSections.append(.section(Section(title: groupTitle, shortTitle: groupTitle, numberOfApps: installed.count)))
+				installedSections.append(contentsOf: installed.map { Entry.app($0) })
+			}
+			
+			let ignored = sorted.filter { $0.isIgnored }
+			if !ignored.isEmpty {
+				ignoredSections.append(.section(Section(title: "\(groupTitle) (Ignored)", shortTitle: groupTitle, numberOfApps: ignored.count)))
+				ignoredSections.append(contentsOf: ignored.map { Entry.app($0) })
+			}
+		}
+		return availableSections + installedSections + ignoredSections
 	}
 	
 

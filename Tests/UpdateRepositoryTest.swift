@@ -266,6 +266,45 @@ final class UpdateRepositoryTest: XCTestCase {
 		
 		XCTAssertEqual(HomebrewUpdateOperation.parsePackageToken("npm:typescript").kind, .npmGlobal)
 		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "npm:typescript", kind: .npmGlobal), ["update", "-g", "typescript"])
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "npm:@smithery/cli", kind: .npmGlobal), ["update", "-g", "@smithery/cli"])
+		
+		let npmBundle = App.Bundle(
+			version: Version(versionNumber: "1.0.0", buildNumber: nil),
+			name: "@smithery/cli",
+			bundleIdentifier: "com.npmjs.global.@smithery/cli",
+			fileURL: URL(fileURLWithPath: "/opt/homebrew/lib/node_modules/@smithery/cli"),
+			source: .homebrew,
+			homebrewFormulaToken: "npm:@smithery/cli"
+		)
+		let npmUpdate = App.Update(app: npmBundle, remoteVersion: Version(versionNumber: "2.0.0", buildNumber: nil), minimumOSVersion: nil, source: .homebrew, date: nil, releaseNotes: nil, updateAction: .builtIn(block: { _ in }))
+		let npmApp = App(bundle: npmBundle, update: .success(npmUpdate), isIgnored: false)
+		XCTAssertEqual(npmApp.packageKind, .npmGlobal)
+		XCTAssertEqual(npmApp.packageKind?.sectionTitle, "Node.js CLI (npm)")
+		
+		AppListSettings.shared.includeNPMUpdates = false
+		let filteredSnapshot = AppListSnapshot(withApps: [npmApp], filterQuery: nil)
+		XCTAssertTrue(filteredSnapshot.homebrewEntries.isEmpty)
+		AppListSettings.shared.includeNPMUpdates = true
+		let enabledSnapshot = AppListSnapshot(withApps: [npmApp], filterQuery: nil)
+		XCTAssertEqual(enabledSnapshot.homebrewEntries.count, 2)
+		
+		// Verify all package updates appear above installed up-to-date packages across sources
+		let previousShowInstalled = AppListSettings.shared.showInstalledUpdates
+		AppListSettings.shared.showInstalledUpdates = true
+		let upToDateBrewBundle = App.Bundle(
+			version: Version(versionNumber: "1.0.0", buildNumber: nil),
+			name: "jq",
+			bundleIdentifier: "sh.brew.formula.jq",
+			fileURL: URL(fileURLWithPath: "/opt/homebrew/Cellar/jq"),
+			source: .homebrew,
+			homebrewFormulaToken: "jq"
+		)
+		let upToDateBrewUpdate = App.Update(app: upToDateBrewBundle, remoteVersion: Version(versionNumber: "1.0.0", buildNumber: nil), minimumOSVersion: nil, source: .homebrew, date: nil, releaseNotes: nil, updateAction: .builtIn(block: { _ in }))
+		let upToDateBrewApp = App(bundle: upToDateBrewBundle, update: .success(upToDateBrewUpdate), isIgnored: false)
+		let orderedSnapshot = AppListSnapshot(withApps: [upToDateBrewApp, npmApp], filterQuery: nil)
+		XCTAssertEqual(orderedSnapshot.app(at: 1, inHomebrewSection: true)?.identifier, npmApp.identifier)
+		XCTAssertEqual(orderedSnapshot.app(at: 3, inHomebrewSection: true)?.identifier, upToDateBrewApp.identifier)
+		AppListSettings.shared.showInstalledUpdates = previousShowInstalled
 		
 		XCTAssertTrue(App.Bundle.isSetappAppURL(URL(fileURLWithPath: "/Applications/Setapp/CleanMyMac X.app")))
 		XCTAssertFalse(App.Bundle.isSetappAppURL(URL(fileURLWithPath: "/Applications/Setapp.app")))

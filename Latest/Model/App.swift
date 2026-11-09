@@ -128,7 +128,7 @@ extension App {
 		return self.source != .none
 	}
 	
-	/// Whether this item is directly managed by a local Homebrew installation (either an installed Caskroom cask or a Cellar CLI formula).
+	/// Whether this item is directly managed by a local Homebrew installation (or another enabled CLI package manager).
 	var isManagedByHomebrew: Bool {
 		if bundle.isHomebrewFormula {
 			return true
@@ -137,6 +137,21 @@ extension App {
 			return true
 		}
 		return HomebrewUpdateOperation.isBundleInCaskroom(bundle)
+	}
+	
+	/// The package manager kind for items displayed in the lower Packages/Homebrew section, or `nil` for regular macOS apps.
+	var packageKind: HomebrewUpdateOperation.PackageKind? {
+		guard isManagedByHomebrew else { return nil }
+		if let token = bundle.homebrewFormulaToken {
+			return HomebrewUpdateOperation.parsePackageToken(token).kind
+		}
+		return .cask
+	}
+	
+	/// Whether this package's source is currently enabled in Settings (`Settings → General → Packages`).
+	var isPackageSourceEnabled: Bool {
+		guard let kind = packageKind else { return true }
+		return kind.isEnabled()
 	}
 	
 	/// The effective support state for this app, distinguishing Caskroom/Formula-managed Homebrew packages (`.full`)
