@@ -12,9 +12,19 @@ import Foundation
 class UpdateInstaller: NSObject, UpdateInstallerProtocol {
 	func performInstallation(ofPackageAt url: URL, targetURL: String, receiptData: Data, receiptURL: URL, reply: @escaping ((any Error)?) -> Void) {
 		do {
-			// Install app
-			let path = url.path()
-			let (success, output) = try performCommand("/usr/sbin/installer -pkg '\(path)' -target '\(targetURL)'")
+			// Install app using unencoded filesystem paths (URL.path() defaults to percentEncoded: true,
+			// which turns "NSIRD_Past Due_..." into "NSIRD_Past%20Due_..." and breaks /usr/sbin/installer).
+			let packagePath = url.path(percentEncoded: false)
+			let normalizedTarget = URL(fileURLWithPath: targetURL).path(percentEncoded: false)
+			var (success, output) = try runInstaller(packagePath: packagePath, target: normalizedTarget)
+			if !success && normalizedTarget != "/" {
+				// Fallback to the root volume mount point if the package requires a volume target
+				let fallbackResult = try runInstaller(packagePath: packagePath, target: "/")
+				if fallbackResult.success {
+					success = true
+					output = fallbackResult.output
+				}
+			}
 			guard success else {
 				reply(NSError(domain: "LatestInstallerErrorDomain", code: 0, userInfo: [NSLocalizedDescriptionKey: output]))
 				return
@@ -23,15 +33,16 @@ class UpdateInstaller: NSObject, UpdateInstallerProtocol {
 			// Insert receipt
 			let fileManager = FileManager.default
 			let attributes: [FileAttributeKey: Any] = [.ownerAccountID: 0, .groupOwnerAccountID: 0, .posixPermissions: 0o755]
+			let receiptPath = receiptURL.path(percentEncoded: false)
 			
-			if fileManager.fileExists(atPath: receiptURL.path()) {
-				try fileManager.removeItem(at: receiptURL)
+			if fileManager.fileExists(atPath: receiptPath) {
+				try fileManager.removeItem(atPath: receiptPath)
 			} else {
 				try fileManager.createDirectory(at: receiptURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: attributes)
 			}
 			
-			try receiptData.write(to: receiptURL, options: .atomic)
-			try fileManager.setAttributes(attributes, ofItemAtPath: receiptURL.path(percentEncoded: false))
+			try receiptData.write(to: URL(fileURLWithPath: receiptPath), options: .atomic)
+			try fileManager.setAttributes(attributes, ofItemAtPath: receiptPath)
 		} catch {
 			reply(error)
 			return
@@ -45,10 +56,10 @@ class UpdateInstaller: NSObject, UpdateInstallerProtocol {
 		reply(nil)
 	}
 	
-	private func performCommand(_ command: String) throws -> (success: Bool, output: String) {
+	private func runInstaller(packagePath: String, target: String) throws -> (success: Bool, output: String) {
 		let process = Process()
-		process.executableURL = URL(fileURLWithPath: "/bin/bash")
-		process.arguments = ["-c", command]
+		process.executableURL = URL(fileURLWithPath: "/usr/sbin/installer")
+		process.arguments = ["-pkg", packagePath, "-target", target]
 		
 		let pipe = Pipe()
 		process.standardOutput = pipe

@@ -32,10 +32,36 @@ class AppStoreUpdateOperation: UpdateOperation, @unchecked Sendable {
 	}
 	
 	static func prepareForUpdates() throws(InstallHelperError) {
-		// Framework can download and install apps automatically
+		// Framework can download and install apps automatically, or fallback to mas-cli when installed
 		if requiresManualInstallation {
-			try InstallHelper.verifyAvailability()
+			do {
+				try InstallHelper.verifyAvailability()
+			} catch let helperError {
+				if resolvedMasExecutableURL() == nil {
+					throw helperError
+				}
+			}
 		}
+	}
+	
+	/// Known search paths for `mas` (`mas-cli`).
+	static let defaultMasSearchPaths: [String] = [
+		"/opt/homebrew/bin/mas",
+		"/usr/local/bin/mas",
+		"/opt/local/bin/mas"
+	]
+	
+	/// Returns the first executable `mas` binary URL found in `candidates`.
+	static func resolvedMasExecutableURL(candidates: [String] = defaultMasSearchPaths, fileManager: FileManager = .default) -> URL? {
+		for path in candidates where fileManager.isExecutableFile(atPath: path) {
+			return URL(fileURLWithPath: path)
+		}
+		return nil
+	}
+	
+	/// Command-line arguments passed to `mas` to upgrade a specific Mac App Store item identifier.
+	static func masUpgradeArguments(forItemIdentifier itemIdentifier: UInt64) -> [String] {
+		return ["upgrade", String(itemIdentifier)]
 	}
 	
 	fileprivate static let requiresManualInstallation: Bool = {
@@ -57,21 +83,68 @@ class AppStoreUpdateOperation: UpdateOperation, @unchecked Sendable {
 	override func execute() {
 		super.execute()
 		
+		// If manual installation is required, the privileged InstallHelper is not enabled, and mas-cli is installed,
+		// use mas-cli directly.
+		if Self.requiresManualInstallation,
+		   (try? InstallHelper.verifyAvailability()) == nil,
+		   let masURL = Self.resolvedMasExecutableURL() {
+			self.performMasUpgrade(using: masURL, fallbackError: nil)
+			return
+		}
+		
 		// Construct purchase to receive update
 		let purchase = SSPurchase(itemIdentifier: self.itemIdentifier, account: nil)
 		CKPurchaseController.shared().perform(purchase, withOptions: 0) { [weak self] purchase, _, error, response in
 			guard let self = self else { return }
 
 			if let error = error {
-				self.finish(with: error)
+				if let masURL = Self.resolvedMasExecutableURL() {
+					self.performMasUpgrade(using: masURL, fallbackError: error)
+				} else {
+					self.finish(with: error)
+				}
 				return
 			}
 
 			if let downloads = response?.downloads, downloads.count > 0, let purchase = purchase {
 				self.purchase = purchase
 				self.observerIdentifier = CKDownloadQueue.shared().add(self)
+			} else if let masURL = Self.resolvedMasExecutableURL() {
+				self.performMasUpgrade(using: masURL, fallbackError: LatestError.updateInfoUnavailable)
 			} else {
 				self.finish(with: LatestError.updateInfoUnavailable)
+			}
+		}
+	}
+	
+	private func performMasUpgrade(using masURL: URL, fallbackError: Error?) {
+		self.progressState = .installing
+		let itemID = self.itemIdentifier
+		DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+			guard let self, !self.isCancelled else {
+				self?.finish()
+				return
+			}
+			let process = Process()
+			process.executableURL = masURL
+			process.arguments = Self.masUpgradeArguments(forItemIdentifier: itemID)
+			let pipe = Pipe()
+			process.standardOutput = pipe
+			process.standardError = pipe
+			do {
+				try process.run()
+				process.waitUntilExit()
+				if process.terminationStatus == 0 {
+					self.finish()
+				} else if let fallbackError {
+					self.finish(with: fallbackError)
+				} else {
+					let data = pipe.fileHandleForReading.readDataToEndOfFile()
+					let message = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "mas upgrade exited with status \(process.terminationStatus)"
+					self.finish(with: NSError(domain: "LatestAppStoreMasErrorDomain", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: message]))
+				}
+			} catch {
+				self.finish(with: fallbackError ?? error)
 			}
 		}
 	}
@@ -157,9 +230,14 @@ extension AppStoreUpdateOperation: CKDownloadQueueObserver {
 			return
 		}
 		
-		// No manual installation possible, abort with error
-		guard let installerPackageURL, let receiptData = download.metadata.receiptData, let bundle = Bundle(identifier: bundleIdentifier), let receiptURL = bundle.appStoreReceiptURL else {
-			self.finish(with: status.error)
+		// No manual installation possible, abort with error (or fallback to mas-cli if installed)
+		let targetBundle = Bundle(url: self.installURL) ?? Bundle(identifier: bundleIdentifier)
+		guard let installerPackageURL, let receiptData = download.metadata.receiptData, let bundle = targetBundle, let receiptURL = bundle.appStoreReceiptURL else {
+			if let masURL = Self.resolvedMasExecutableURL() {
+				self.performMasUpgrade(using: masURL, fallbackError: status.error)
+			} else {
+				self.finish(with: status.error)
+			}
 			return
 		}
 		
@@ -175,7 +253,11 @@ extension AppStoreUpdateOperation: CKDownloadQueueObserver {
 				try await InstallHelper.shared.installPackage(at: installerPackageURL, targetURL: bundle.bundlePath, receiptData: receiptData, receiptURL: receiptURL)
 				self.finish()
 			} catch {
-				self.finish(with: error)
+				if let masURL = Self.resolvedMasExecutableURL() {
+					self.performMasUpgrade(using: masURL, fallbackError: error)
+				} else {
+					self.finish(with: error)
+				}
 			}
 		}
 	}

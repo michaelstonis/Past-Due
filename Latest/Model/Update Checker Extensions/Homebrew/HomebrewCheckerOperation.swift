@@ -46,11 +46,13 @@ class HomebrewCheckerOperation: StatefulOperation, UpdateCheckerOperation, @unch
 	// MARK: - Operation
 
 	override func execute() {
-		// 1. Check if this bundle represents an installed Homebrew CLI formula in Cellar
+		// 1. Check if this bundle represents an installed CLI formula or package-manager tool
 		if let formulaToken = bundle.homebrewFormulaToken {
+			let parsed = HomebrewUpdateOperation.parsePackageToken(formulaToken)
 			let remoteVersion = HomebrewUpdateOperation.outdatedFormulaVersion(for: formulaToken) ?? bundle.version
 			let meta = HomebrewUpdateOperation.formulaMetadata(for: bundle)
 			let repoSlug = Self.extractGitHubRepoSlug(from: [meta.sourceURL, meta.homepage])
+			let upgradeCmd = HomebrewUpdateOperation.upgradeCommandString(forToken: formulaToken, kind: parsed.kind)
 			
 			Self.fetchGitHubChangelogHTML(
 				repoSlug: repoSlug,
@@ -59,12 +61,12 @@ class HomebrewCheckerOperation: StatefulOperation, UpdateCheckerOperation, @unch
 			) { changelogHTML in
 				let html = Self.formattedInfoCardHTML(
 					name: self.bundle.name,
-					token: formulaToken,
-					kindLabel: "Homebrew Formula (CLI)",
+					token: parsed.name,
+					kindLabel: parsed.kind.displayLabel,
 					isManagedByHomebrew: true,
 					installedVersion: self.bundle.version,
 					remoteVersion: remoteVersion,
-					upgradeCommand: "brew upgrade --formula \(formulaToken)",
+					upgradeCommand: upgradeCmd,
 					description: meta.description,
 					homepage: meta.homepage,
 					caveats: nil,
@@ -77,7 +79,7 @@ class HomebrewCheckerOperation: StatefulOperation, UpdateCheckerOperation, @unch
 							bundleIdentifier: app.bundleIdentifier,
 							appIdentifier: app.identifier,
 							caskToken: formulaToken,
-							packageKind: .formula
+							packageKind: parsed.kind
 						)
 					)
 				}
@@ -95,7 +97,7 @@ class HomebrewCheckerOperation: StatefulOperation, UpdateCheckerOperation, @unch
 			return
 		}
 		
-		// 2. Otherwise check Homebrew Cask catalog (and local Caskroom fallback for custom-tap casks)
+		// 2. Otherwise check Homebrew Cask catalog (and local Caskroom / Setapp fallback)
 		guard let repository else {
 			self.finish()
 			return
@@ -104,17 +106,27 @@ class HomebrewCheckerOperation: StatefulOperation, UpdateCheckerOperation, @unch
 		repository.updateEntry(for: bundle) { bundle, entry in
 			let installedCaskToken = HomebrewUpdateOperation.installedCaskToken(forAppAt: bundle.fileURL)
 			let token = entry?.token ?? installedCaskToken
-			let remoteVersion = entry?.version ?? token.flatMap { HomebrewUpdateOperation.outdatedCaskVersion(for: $0) } ?? (installedCaskToken != nil ? bundle.version : nil)
+			let remoteVersion = entry?.version ?? token.flatMap { HomebrewUpdateOperation.outdatedCaskVersion(for: $0) } ?? ((installedCaskToken != nil || bundle.isSetappBundle) ? bundle.version : nil)
 			guard let remoteVersion else {
 				self.finish()
 				return
 			}
 			
 			let isManaged = token.map { HomebrewUpdateOperation.canUpdate(caskToken: $0) } ?? false
+			let isSetapp = bundle.isSetappBundle
 			let action: App.Update.Action
 			if let token, isManaged {
 				action = .builtIn(block: { app in
 					UpdateQueue.shared.addOperation(HomebrewUpdateOperation(bundleIdentifier: app.bundleIdentifier, appIdentifier: app.identifier, caskToken: token, packageKind: .cask))
+				})
+			} else if isSetapp {
+				action = .external(label: "Setapp", block: { app in
+					let setappURL = URL(fileURLWithPath: "/Applications/Setapp.app")
+					if FileManager.default.fileExists(atPath: setappURL.path) {
+						NSWorkspace.shared.open(setappURL)
+					} else {
+						app.open()
+					}
 				})
 			} else {
 				action = .external(label: bundle.name, block: { app in
@@ -122,18 +134,14 @@ class HomebrewCheckerOperation: StatefulOperation, UpdateCheckerOperation, @unch
 				})
 			}
 			
-			guard let token else {
-				self.update = App.Update(
-					app: bundle,
-					remoteVersion: remoteVersion,
-					minimumOSVersion: entry?.minimumOSVersion,
-					source: .homebrew,
-					date: nil,
-					releaseNotes: nil,
-					updateAction: action
-				)
-				self.finish()
-				return
+			let resolvedToken = token ?? bundle.bundleIdentifier
+			let kindLabel: String
+			if isManaged {
+				kindLabel = "Homebrew Cask (Managed in Caskroom)"
+			} else if isSetapp {
+				kindLabel = "Setapp Managed Application (/Applications/Setapp)"
+			} else {
+				kindLabel = "Homebrew Cask Catalog (External App)"
 			}
 			
 			let repoSlug = Self.extractGitHubRepoSlug(from: [entry?.downloadURL, entry?.verifiedURL, entry?.homepage])
@@ -144,12 +152,12 @@ class HomebrewCheckerOperation: StatefulOperation, UpdateCheckerOperation, @unch
 			) { changelogHTML in
 				let html = Self.formattedInfoCardHTML(
 					name: bundle.name,
-					token: token,
-					kindLabel: isManaged ? "Homebrew Cask (Managed in Caskroom)" : "Homebrew Cask Catalog (External App)",
+					token: resolvedToken,
+					kindLabel: kindLabel,
 					isManagedByHomebrew: isManaged,
 					installedVersion: bundle.version,
 					remoteVersion: remoteVersion,
-					upgradeCommand: isManaged ? "brew upgrade --cask --greedy \(token)" : "brew install --cask \(token)",
+					upgradeCommand: isManaged ? "brew upgrade --cask --greedy \(resolvedToken)" : "brew install --cask \(resolvedToken)",
 					description: entry?.description,
 					homepage: entry?.homepage,
 					caveats: entry?.caveats,

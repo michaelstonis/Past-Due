@@ -13,6 +13,7 @@ private let ShowIgnoredUpdatesKey = "ShowIgnoredUpdatesKey"
 private let IncludeUnsupportedAppsKey = "ShowUnsupportedUpdatesKey"
 private let IncludeAppsWithLimitedSupportKey = "IncludeAppsWithLimitedSupportKey"
 private let IncludeHomebrewUpdatesKey = "IncludeHomebrewUpdatesKey"
+private let IncludeAdditionalPackageManagersKey = "IncludeAdditionalPackageManagersKey"
 
 /// Observable front end to app list preferences.
 struct AppListSettings: Observable {
@@ -119,6 +120,17 @@ struct AppListSettings: Observable {
 		
 		get {
 			UserDefaults.standard.bool(forKey: IncludeHomebrewUpdatesKey)
+		}
+	}
+	
+	/// Whether additional package managers (MacPorts, Nix, Cargo, uv, npm -g) should be discovered and shown in the lower package manager section.
+	var includeAdditionalPackageManagers: Bool {
+		set {
+			set(newValue, forKey: IncludeAdditionalPackageManagersKey)
+		}
+		
+		get {
+			UserDefaults.standard.bool(forKey: IncludeAdditionalPackageManagersKey)
 		}
 	}
 	

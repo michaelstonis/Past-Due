@@ -12,6 +12,7 @@ import AppKit
 class GeneralSettingsViewController: SettingsTabItemViewController {
 	
 	private var includeHomebrewCheckbox: NSButton?
+	private var includeAdditionalPackagesCheckbox: NSButton?
 	private var automaticChecksCheckbox: NSButton?
 	private var intervalPopUpButton: NSPopUpButton?
 	private var notificationsCheckbox: NSButton?
@@ -106,6 +107,16 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 		let homebrewDescRow = gridView.addRow(with: [NSGridCell.emptyContentView, homebrewDescContainer])
 		homebrewDescRow.cell(at: 1).xPlacement = .leading
 		
+		let extraPkgButton = NSButton(
+			checkboxWithTitle: NSLocalizedString("IncludeAdditionalPackageManagersTitle", value: "Other package managers (MacPorts, Nix, Cargo, uv, npm)", comment: "Checkbox title to include MacPorts, Nix, and global developer CLI packages."),
+			target: self,
+			action: #selector(toggleIncludeAdditionalPackageManagers(_:))
+		)
+		self.includeAdditionalPackagesCheckbox = extraPkgButton
+		let extraPkgRow = gridView.addRow(with: [NSGridCell.emptyContentView, extraPkgButton])
+		extraPkgRow.topPadding = 6
+		extraPkgRow.cell(at: 1).xPlacement = .leading
+		
 		let separator = NSBox()
 		separator.boxType = .separator
 		let separatorRow = gridView.addRow(with: [NSGridCell.emptyContentView, separator])
@@ -193,6 +204,7 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 	
 	private func refreshBackgroundUpdateControls() {
 		includeHomebrewCheckbox?.state = AppListSettings.shared.includeHomebrewUpdates ? .on : .off
+		includeAdditionalPackagesCheckbox?.state = AppListSettings.shared.includeAdditionalPackageManagers ? .on : .off
 		
 		let settings = BackgroundCheckSettings.shared
 		let enabled = settings.automaticChecksEnabled
@@ -216,6 +228,11 @@ class GeneralSettingsViewController: SettingsTabItemViewController {
 	
 	@objc private func toggleIncludeHomebrewUpdates(_ sender: NSButton) {
 		AppListSettings.shared.includeHomebrewUpdates = (sender.state == .on)
+	}
+	
+	@objc private func toggleIncludeAdditionalPackageManagers(_ sender: NSButton) {
+		AppListSettings.shared.includeAdditionalPackageManagers = (sender.state == .on)
+		UpdateCheckCoordinator.shared.refreshAfterHomebrewUpgrade()
 	}
 	
 	@objc private func toggleAutomaticChecks(_ sender: NSButton) {

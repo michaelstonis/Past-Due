@@ -13,7 +13,7 @@ import UniformTypeIdentifiers
 enum BundleCollector {
 	
 	/// Excluded subfolders that won't be checked.
-	private static let excludedSubfolders = Set(["Setapp"])
+	private static let excludedSubfolders = Set<String>()
 	
 	/// Set of bundles that should not be included in Latest.
 	private static let excludedBundleIdentifiers = Set([

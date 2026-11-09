@@ -10,9 +10,44 @@ import Foundation
 /// Only casks or formulae that Homebrew already manages are updated in-app. Apps that were installed in another way keep opening the app as before.
 class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 	
-	enum PackageKind {
+	enum PackageKind: Equatable {
 		case cask
 		case formula
+		case macports
+		case nix
+		case cargo
+		case uvTool
+		case npmGlobal
+		
+		var displayLabel: String {
+			switch self {
+			case .cask: return "Homebrew Cask"
+			case .formula: return "Homebrew Formula (CLI)"
+			case .macports: return "MacPorts Package"
+			case .nix: return "Nix Profile Package"
+			case .cargo: return "Cargo Crate (Rust CLI)"
+			case .uvTool: return "uv Tool (Python CLI)"
+			case .npmGlobal: return "npm Global Package"
+			}
+		}
+	}
+	
+	/// Parses a `homebrewFormulaToken` string (which may be prefixed with `"macports:"`, `"nix:"`, `"cargo:"`, `"uv:"`, or `"npm:"`)
+	/// into its `PackageKind` and raw package name.
+	static func parsePackageToken(_ rawToken: String) -> (kind: PackageKind, name: String) {
+		if let colon = rawToken.firstIndex(of: ":") {
+			let prefix = String(rawToken[..<colon])
+			let name = String(rawToken[rawToken.index(after: colon)...])
+			switch prefix {
+			case "macports": return (.macports, name)
+			case "nix": return (.nix, name)
+			case "cargo": return (.cargo, name)
+			case "uv": return (.uvTool, name)
+			case "npm": return (.npmGlobal, name)
+			default: break
+			}
+		}
+		return (.formula, rawToken)
 	}
 	
 	/// The Homebrew cask or formula token.
@@ -63,15 +98,65 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 		upgradeArguments(forToken: token, kind: .cask)
 	}
 	
-	/// The arguments for upgrading either a cask or a formula.
+	/// The arguments for upgrading a package in its respective package manager.
 	static func upgradeArguments(forToken token: String, kind: PackageKind) -> [String]? {
-		guard isValid(caskToken: token) else { return nil }
+		let (_, cleanName) = parsePackageToken(token)
+		guard isValid(caskToken: cleanName) else { return nil }
 		switch kind {
 		case .cask:
-			return ["upgrade", "--cask", "--greedy", token]
+			return ["upgrade", "--cask", "--greedy", cleanName]
 		case .formula:
-			return ["upgrade", "--formula", token]
+			return ["upgrade", "--formula", cleanName]
+		case .macports:
+			return ["upgrade", cleanName]
+		case .nix:
+			return ["profile", "upgrade", cleanName]
+		case .cargo:
+			return ["install", cleanName]
+		case .uvTool:
+			return ["tool", "upgrade", cleanName]
+		case .npmGlobal:
+			return ["update", "-g", cleanName]
 		}
+	}
+	
+	/// Returns the human-readable CLI command used to upgrade `token` under `kind`.
+	static func upgradeCommandString(forToken token: String, kind: PackageKind) -> String {
+		let (_, cleanName) = parsePackageToken(token)
+		switch kind {
+		case .cask: return "brew upgrade --cask --greedy \(cleanName)"
+		case .formula: return "brew upgrade --formula \(cleanName)"
+		case .macports: return "port upgrade \(cleanName)"
+		case .nix: return "nix profile upgrade \(cleanName)"
+		case .cargo: return "cargo install \(cleanName)"
+		case .uvTool: return "uv tool upgrade \(cleanName)"
+		case .npmGlobal: return "npm update -g \(cleanName)"
+		}
+	}
+	
+	/// Resolves the executable URL for the given `PackageKind`.
+	static func executableURL(for kind: PackageKind, fileManager: FileManager = .default) -> URL? {
+		let candidates: [String]
+		switch kind {
+		case .cask, .formula:
+			return brewURL
+		case .macports:
+			candidates = ["/opt/local/bin/port"]
+		case .nix:
+			candidates = ["/nix/var/nix/profiles/default/bin/nix", "/run/current-system/sw/bin/nix", "/usr/local/bin/nix"]
+		case .cargo:
+			let home = fileManager.homeDirectoryForCurrentUser.path
+			candidates = ["\(home)/.cargo/bin/cargo", "/opt/homebrew/bin/cargo", "/usr/local/bin/cargo"]
+		case .uvTool:
+			let home = fileManager.homeDirectoryForCurrentUser.path
+			candidates = ["\(home)/.local/bin/uv", "\(home)/.cargo/bin/uv", "/opt/homebrew/bin/uv", "/usr/local/bin/uv"]
+		case .npmGlobal:
+			candidates = ["/opt/homebrew/bin/npm", "/usr/local/bin/npm"]
+		}
+		for path in candidates where fileManager.isExecutableFile(atPath: path) {
+			return URL(fileURLWithPath: path)
+		}
+		return nil
 	}
 	
 	
@@ -192,6 +277,116 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 				)
 			}
 		}
+		if AppListSettings.shared.includeAdditionalPackageManagers {
+			results.append(contentsOf: collectAdditionalPackageBundles())
+		}
+		return results
+	}
+	
+	/// Discovers installed packages from MacPorts, Nix profiles, Cargo (`~/.cargo/.crates2.json`), and `uv` (`~/.local/share/uv/tools`)
+	/// when `includeAdditionalPackageManagers` is enabled in Settings.
+	static func collectAdditionalPackageBundles(fileManager fm: FileManager = .default) -> [App.Bundle] {
+		var results = [App.Bundle]()
+		let home = fm.homeDirectoryForCurrentUser
+		
+		// 1. MacPorts (/opt/local/var/macports/software/<port>/<version>_0)
+		let macportsSoftware = URL(fileURLWithPath: "/opt/local/var/macports/software")
+		if executableURL(for: .macports, fileManager: fm) != nil,
+		   let portDirs = try? fm.contentsOfDirectory(at: macportsSoftware, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+			for portURL in portDirs {
+				let name = portURL.lastPathComponent
+				guard isValid(caskToken: name),
+					  let verDirs = try? fm.contentsOfDirectory(at: portURL, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]),
+					  let latestURL = verDirs.last else { continue }
+				let rawVer = latestURL.lastPathComponent.split(separator: "_").first.map(String.init) ?? latestURL.lastPathComponent
+				let version = VersionParser.parse(combinedVersionNumber: rawVer)
+				guard !version.isEmpty else { continue }
+				let modDate = try? latestURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+				results.append(
+					App.Bundle(
+						version: version,
+						name: name,
+						bundleIdentifier: "org.macports.port.\(name)",
+						fileURL: portURL,
+						source: .homebrew,
+						homebrewFormulaToken: "macports:\(name)",
+						modificationDate: modDate
+					)
+				)
+			}
+		}
+		
+		// 2. Cargo (~/.cargo/.crates2.json)
+		let cargoCratesURL = home.appendingPathComponent(".cargo/.crates2.json")
+		if executableURL(for: .cargo, fileManager: fm) != nil,
+		   let data = try? Data(contentsOf: cargoCratesURL),
+		   let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+		   let installs = json["installs"] as? [String: Any] {
+			let modDate = try? cargoCratesURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+			for key in installs.keys {
+				// Key format: "<crate> <version> (<source>)"
+				let parts = key.split(separator: " ")
+				guard parts.count >= 2 else { continue }
+				let name = String(parts[0])
+				let rawVer = String(parts[1])
+				guard isValid(caskToken: name) else { continue }
+				let version = VersionParser.parse(combinedVersionNumber: rawVer)
+				guard !version.isEmpty else { continue }
+				results.append(
+					App.Bundle(
+						version: version,
+						name: name,
+						bundleIdentifier: "org.rust-lang.cargo.\(name)",
+						fileURL: cargoCratesURL,
+						source: .homebrew,
+						homebrewFormulaToken: "cargo:\(name)",
+						modificationDate: modDate
+					)
+				)
+			}
+		}
+		
+		// 3. uv tools (~/.local/share/uv/tools/<tool>/uv-receipt.toml)
+		let uvToolsDir = home.appendingPathComponent(".local/share/uv/tools")
+		if executableURL(for: .uvTool, fileManager: fm) != nil,
+		   let toolDirs = try? fm.contentsOfDirectory(at: uvToolsDir, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]) {
+			for toolURL in toolDirs {
+				let name = toolURL.lastPathComponent
+				guard isValid(caskToken: name) else { continue }
+				// Look for <name>-<version>.dist-info in lib/python*/site-packages/
+				let libDir = toolURL.appendingPathComponent("lib")
+				var foundVersion: Version?
+				if let pyDirs = try? fm.contentsOfDirectory(at: libDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]),
+				   let pyDir = pyDirs.first {
+					let sitePackages = pyDir.appendingPathComponent("site-packages")
+					if let entries = try? fm.contentsOfDirectory(at: sitePackages, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+						let normalizedPrefix = name.replacingOccurrences(of: "-", with: "_").lowercased() + "-"
+						for entry in entries where entry.lastPathComponent.lowercased().hasPrefix(normalizedPrefix) && entry.lastPathComponent.hasSuffix(".dist-info") {
+							let verPart = entry.lastPathComponent.dropFirst(normalizedPrefix.count).dropLast(".dist-info".count)
+							let parsed = VersionParser.parse(combinedVersionNumber: String(verPart))
+							if !parsed.isEmpty {
+								foundVersion = parsed
+								break
+							}
+						}
+					}
+				}
+				guard let version = foundVersion else { continue }
+				let modDate = try? toolURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+				results.append(
+					App.Bundle(
+						version: version,
+						name: name,
+						bundleIdentifier: "sh.astral.uv.\(name)",
+						fileURL: toolURL,
+						source: .homebrew,
+						homebrewFormulaToken: "uv:\(name)",
+						modificationDate: modDate
+					)
+				)
+			}
+		}
+		
 		return results
 	}
 	
@@ -303,14 +498,15 @@ class HomebrewUpdateOperation: UpdateOperation, @unchecked Sendable {
 	override func execute() {
 		super.execute()
 		
-		guard let brew = Self.brewURL, let arguments = Self.upgradeArguments(forToken: packageToken, kind: packageKind) else {
+		guard let executable = Self.executableURL(for: packageKind),
+			  let arguments = Self.upgradeArguments(forToken: packageToken, kind: packageKind) else {
 			finish(with: LatestError.custom(title: NSLocalizedString("HomebrewNotInstalledError", value: "Homebrew is not installed", comment: "Error title when an app should be updated through Homebrew, but Homebrew is missing."), description: nil))
 			return
 		}
 		
 		progressState = .installing
 		let process = Process()
-		process.executableURL = brew
+		process.executableURL = executable
 		process.arguments = arguments
 		
 		var environment = ProcessInfo.processInfo.environment

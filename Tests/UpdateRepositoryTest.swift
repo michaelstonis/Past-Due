@@ -236,4 +236,39 @@ final class UpdateRepositoryTest: XCTestCase {
 		let changedOrUnchecked = Set(newApps.map { $0.bundle }).union(uncheckedBundles)
 		XCTAssertEqual(changedOrUnchecked.count, 2, "Both cached and newly added bundles must be checked on startup")
 	}
+
+	func testAppStoreInstallerUnencodedPathAndMasCLIFallback() {
+		// Regression test for #34: NSIRD_Past Due_... paths contain a space and must not be percent-encoded when passed to /usr/sbin/installer
+		let itemReplacementURL = URL(fileURLWithPath: "/var/folders/61/t0xq666j7237mgycxgt-t8k_r0000gn/T/TemporaryItems/NSIRD_Past Due_ybAcZC/mwj4630617966249919840.pkg")
+		XCTAssertTrue(itemReplacementURL.path().contains("%20"), "URL.path() defaults to percentEncoded: true")
+		XCTAssertEqual(
+			itemReplacementURL.path(percentEncoded: false),
+			"/var/folders/61/t0xq666j7237mgycxgt-t8k_r0000gn/T/TemporaryItems/NSIRD_Past Due_ybAcZC/mwj4630617966249919840.pkg"
+		)
+		
+		// Test #31: mas-cli argument generation and executable discovery
+		XCTAssertEqual(AppStoreUpdateOperation.masUpgradeArguments(forItemIdentifier: 1497506650), ["upgrade", "1497506650"])
+		XCTAssertNil(AppStoreUpdateOperation.resolvedMasExecutableURL(candidates: ["/nonexistent/path/to/mas"]))
+		
+		// Test #29, #30, #32, #33: MacPorts, Nix, Setapp, and Developer CLI Toolchains
+		XCTAssertEqual(HomebrewUpdateOperation.parsePackageToken("macports:wget").kind, .macports)
+		XCTAssertEqual(HomebrewUpdateOperation.parsePackageToken("macports:wget").name, "wget")
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "macports:wget", kind: .macports), ["upgrade", "wget"])
+		
+		XCTAssertEqual(HomebrewUpdateOperation.parsePackageToken("nix:ripgrep").kind, .nix)
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "nix:ripgrep", kind: .nix), ["profile", "upgrade", "ripgrep"])
+		
+		XCTAssertEqual(HomebrewUpdateOperation.parsePackageToken("cargo:fd-find").kind, .cargo)
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "cargo:fd-find", kind: .cargo), ["install", "fd-find"])
+		
+		XCTAssertEqual(HomebrewUpdateOperation.parsePackageToken("uv:ruff").kind, .uvTool)
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "uv:ruff", kind: .uvTool), ["tool", "upgrade", "ruff"])
+		
+		XCTAssertEqual(HomebrewUpdateOperation.parsePackageToken("npm:typescript").kind, .npmGlobal)
+		XCTAssertEqual(HomebrewUpdateOperation.upgradeArguments(forToken: "npm:typescript", kind: .npmGlobal), ["update", "-g", "typescript"])
+		
+		XCTAssertTrue(App.Bundle.isSetappAppURL(URL(fileURLWithPath: "/Applications/Setapp/CleanMyMac X.app")))
+		XCTAssertFalse(App.Bundle.isSetappAppURL(URL(fileURLWithPath: "/Applications/Setapp.app")))
+		XCTAssertFalse(App.Bundle.isSetappAppURL(URL(fileURLWithPath: "/Applications/Safari.app")))
+	}
 }

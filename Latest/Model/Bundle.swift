@@ -44,6 +44,18 @@ extension App {
 			homebrewFormulaToken != nil
 		}
 		
+		/// Whether this `.app` bundle is installed inside a Setapp-managed folder (`/Applications/Setapp` or `~/Applications/Setapp`).
+		var isSetappBundle: Bool {
+			Self.isSetappAppURL(fileURL)
+		}
+		
+		/// Returns `true` if `url` resides inside a Setapp applications directory.
+		static func isSetappAppURL(_ url: URL) -> Bool {
+			let standardized = url.standardizedFileURL.path
+			guard standardized.contains("/Setapp/") else { return false }
+			return url.lastPathComponent.lowercased() != "setapp.app"
+		}
+		
 		init(version: Version, name: String, bundleIdentifier: String, fileURL: URL, source: Source, homebrewFormulaToken: String? = nil, modificationDate: Date? = nil) {
 			self.version = version
 			self.name = name
